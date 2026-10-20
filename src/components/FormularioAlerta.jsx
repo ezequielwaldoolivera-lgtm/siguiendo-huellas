@@ -18,15 +18,20 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
       return;
     }
 
+    const lat = Number(coordenadaSeleccionada.lat);
+    const lng = Number(coordenadaSeleccionada.lng);
+
+    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+      alert('Coordenadas inválidas. Hacé clic nuevamente en el mapa.');
+      return;
+    }
+
     setSubiendo(true);
     try {
       let fotoUrl = null;
       if (foto) {
         fotoUrl = await subirFotoMascota(foto);
       }
-
-      const lat = parseFloat(coordenadaSeleccionada.lat);
-      const lng = parseFloat(coordenadaSeleccionada.lng);
 
       const nuevoReporte = {
         tipo_alerta: tipoAlerta.toUpperCase(),
@@ -40,9 +45,10 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
         resuelto: false
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('reportes_mapa')
-        .insert([nuevoReporte]);
+        .insert([nuevoReporte])
+        .select();
 
       if (error) throw error;
 
@@ -51,7 +57,7 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
       setFoto(null);
 
       if (onAlertaGuardada) {
-        onAlertaGuardada();
+        onAlertaGuardada(data && data[0] ? data[0] : nuevoReporte);
       }
 
       alert('¡Alerta registrada con éxito en el mapa!');
@@ -143,7 +149,7 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
           {subiendo
             ? 'Publicando en el mapa...'
             : coordenadaSeleccionada
-            ? `Publicar Alerta (${coordenadaSeleccionada.lat.toFixed(3)}, ${coordenadaSeleccionada.lng.toFixed(3)})`
+            ? `Publicar Alerta (${Number(coordenadaSeleccionada.lat).toFixed(4)}, ${Number(coordenadaSeleccionada.lng).toFixed(4)})`
             : 'Marcá el mapa o usá tu GPS para ubicar'}
         </span>
       </button>
