@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
 import { supabase } from '../services/supabase';
 import { subirFotoMascota } from '../services/storageService';
-import { Camera, Send, Check } from 'lucide-react';
+import { Camera, Send, Check, AlertCircle, Link2, KeyRound } from 'lucide-react';
 
-export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuardada }) {
+export default function FormularioAlerta({
+  coordenadaSeleccionada,
+  onAlertaGuardada,
+  reportesActivos = [],
+  casoVinculadoId = null,
+  onCancelarVinculacion
+}) {
   const [tipoAlerta, setTipoAlerta] = useState('PERDIDO');
   const [descripcion, setDescripcion] = useState('');
   const [telefonoContacto, setTelefonoContacto] = useState('');
+  const [pinSeguridad, setPinSeguridad] = useState('');
+  const [idPadreSeleccionado, setIdPadreSeleccionado] = useState(casoVinculadoId || '');
   const [foto, setFoto] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
+
+  React.useEffect(() => {
+    if (casoVinculadoId) {
+      setIdPadreSeleccionado(casoVinculadoId);
+      setTipoAlerta('VISTO');
+    }
+  }, [casoVinculadoId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!coordenadaSeleccionada || !coordenadaSeleccionada.lat || !coordenadaSeleccionada.lng) {
-      alert('Tocá primero un punto en el mapa o presioná Mi GPS.');
+      alert('Tocá un punto en el mapa o presioná Mi GPS.');
+      return;
+    }
+
+    if (!pinSeguridad || pinSeguridad.trim().length < 4) {
+      alert('Ingresá un PIN de 4 dígitos para que solo vos puedas cerrar la alerta.');
       return;
     }
 
@@ -22,7 +42,7 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
     const lng = Number(coordenadaSeleccionada.lng);
 
     if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-      alert('Coordenadas inválidas. Hacé clic nuevamente en el mapa.');
+      alert('Coordenadas no válidas.');
       return;
     }
 
@@ -42,6 +62,8 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
         lat: lat,
         lng: lng,
         ubicacion: `SRID=4326;POINT(${lng} ${lat})`,
+        pin_seguridad: pinSeguridad.trim(),
+        id_padre: idPadreSeleccionado || null,
         resuelto: false
       };
 
@@ -52,15 +74,22 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
 
       if (error) throw error;
 
+      if (data && data[0]) {
+        localStorage.setItem(`pin_alerta_${data[0].id}`, pinSeguridad.trim());
+      }
+
       setDescripcion('');
       setTelefonoContacto('');
+      setPinSeguridad('');
+      setIdPadreSeleccionado('');
       setFoto(null);
+      if (onCancelarVinculacion) onCancelarVinculacion();
 
       if (onAlertaGuardada) {
         onAlertaGuardada(data && data[0] ? data[0] : nuevoReporte);
       }
 
-      alert('¡Alerta registrada con éxito en el mapa!');
+      alert('¡Alerta publicada! Recordá tu PIN para cerrarla más adelante.');
     } catch (err) {
       console.error(err);
       alert('Error al publicar: ' + (err.message || 'Error desconocido'));
@@ -70,60 +99,146 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ padding: '10px 14px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr auto', gap: '8px', marginBottom: '8px' }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+      {idPadreSeleccionado && (
+        <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 8px', fontSize: '0.75rem', color: '#92400e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Link2 size={13} /> Vinculado a caso existente
+          </span>
+          <button
+            type="button"
+            onClick={() => { setIdPadreSeleccionado(''); if (onCancelarVinculacion) onCancelarVinculacion(); }}
+            style={{ background: 'none', border: 'none', color: '#b45309', fontWeight: 800, cursor: 'pointer' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      <div>
+        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
+          Estado
+        </label>
         <select
           value={tipoAlerta}
           onChange={(e) => setTipoAlerta(e.target.value)}
-          style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.85rem', fontWeight: 600 }}
-        >
-          <option value="PERDIDO">Perdido</option>
-          <option value="VISTO">Avistado</option>
-        </select>
-
-        <input
-          type="tel"
-          placeholder="Teléfono / WhatsApp de contacto"
-          value={telefonoContacto}
-          onChange={(e) => setTelefonoContacto(e.target.value)}
-          style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-        />
-
-        <label
           style={{
-            backgroundColor: foto ? '#16a34a' : '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
+            width: '100%',
+            padding: '8px',
             borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            whiteSpace: 'nowrap'
+            border: '1px solid #a7f3d0',
+            backgroundColor: '#ffffff',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            color: '#065f46',
+            outline: 'none'
           }}
         >
-          {foto ? <Check size={16} /> : <Camera size={16} />}
-          <span>{foto ? 'Foto lista' : 'Foto'}</span>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => setFoto(e.target.files[0] || null)}
-            style={{ display: 'none' }}
-          />
-        </label>
+          <option value="PERDIDO">🚨 Perdido (Busco a mi mascota)</option>
+          <option value="VISTO">👀 Avistado (Lo vi deambulando)</option>
+          <option value="RETENIDO">🏠 Retenido (Lo tengo bajo resguardo)</option>
+        </select>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+      {tipoAlerta === 'VISTO' && !idPadreSeleccionado && (
+        <div>
+          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
+            ¿Es un perro ya publicado? (Opcional)
+          </label>
+          <select
+            value={idPadreSeleccionado}
+            onChange={(e) => setIdPadreSeleccionado(e.target.value)}
+            style={{ width: '100%', padding: '7px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.78rem', outline: 'none' }}
+          >
+            <option value="">-- Nuevo reporte suelto --</option>
+            {reportesActivos.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.tipo_alerta}: {(r.descripcion || 'Sin descripción').slice(0, 30)}...
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div>
+        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
+          WhatsApp de Contacto
+        </label>
         <input
-          type="text"
-          placeholder="Descripción (raza, collar, señas particulares...)"
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-          style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
+          type="tel"
+          placeholder="Ej: 11 2345 6789"
+          value={telefonoContacto}
+          onChange={(e) => setTelefonoContacto(e.target.value)}
+          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.82rem', outline: 'none' }}
         />
       </div>
+
+      <div>
+        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
+          PIN de Cierre (4 números)
+        </label>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="password"
+            maxLength={6}
+            placeholder="Ej: 1234 (Solo vos podrás resolverla)"
+            value={pinSeguridad}
+            onChange={(e) => setPinSeguridad(e.target.value)}
+            style={{ width: '100%', padding: '8px 8px 8px 30px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.82rem', outline: 'none' }}
+          />
+          <KeyRound size={14} style={{ position: 'absolute', left: '9px', top: '10px', color: '#059669' }} />
+        </div>
+      </div>
+
+      <div>
+        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
+          Descripción / Señas
+        </label>
+        <textarea
+          rows={2}
+          placeholder="Raza, tamaño, collar, hacia dónde iba..."
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.82rem', outline: 'none', resize: 'none' }}
+        />
+      </div>
+
+      <label
+        style={{
+          backgroundColor: foto ? '#059669' : '#10b981',
+          color: '#ffffff',
+          padding: '8px',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          cursor: 'pointer',
+          fontSize: '0.82rem',
+          fontWeight: 600
+        }}
+      >
+        {foto ? <Check size={15} /> : <Camera size={15} />}
+        <span>{foto ? 'Foto lista' : 'Adjuntar Foto'}</span>
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => setFoto(e.target.files[0] || null)}
+          style={{ display: 'none' }}
+        />
+      </label>
+
+      {coordenadaSeleccionada ? (
+        <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '6px', fontSize: '0.73rem', color: '#065f46', textAlign: 'center' }}>
+          📍 <b>Punto:</b> {coordenadaSeleccionada.lat.toFixed(4)}, {coordenadaSeleccionada.lng.toFixed(4)}
+        </div>
+      ) : (
+        <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px', fontSize: '0.72rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <AlertCircle size={14} flexShrink={0} />
+          <span>Tocá en el mapa o <b>Mi GPS</b> para marcar el lugar.</span>
+        </div>
+      )}
 
       <button
         type="submit"
@@ -133,25 +248,19 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
           padding: '10px',
           borderRadius: '6px',
           border: 'none',
-          backgroundColor: coordenadaSeleccionada ? '#2563eb' : '#9ca3af',
+          backgroundColor: coordenadaSeleccionada ? '#047857' : '#9ca3af',
           color: '#ffffff',
-          fontWeight: 700,
-          fontSize: '0.9rem',
+          fontWeight: 800,
+          fontSize: '0.85rem',
           cursor: coordenadaSeleccionada && !subiendo ? 'pointer' : 'not-allowed',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px'
+          gap: '6px'
         }}
       >
-        <Send size={16} />
-        <span>
-          {subiendo
-            ? 'Publicando en el mapa...'
-            : coordenadaSeleccionada
-            ? `Publicar Alerta (${Number(coordenadaSeleccionada.lat).toFixed(4)}, ${Number(coordenadaSeleccionada.lng).toFixed(4)})`
-            : 'Marcá el mapa o usá tu GPS para ubicar'}
-        </span>
+        <Send size={15} />
+        <span>{subiendo ? 'Publicando...' : 'Publicar Alerta'}</span>
       </button>
     </form>
   );

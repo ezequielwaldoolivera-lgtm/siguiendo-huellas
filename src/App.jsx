@@ -2,16 +2,32 @@ import React, { useState, useEffect } from 'react';
 import MapaInteractivo from './components/MapaInteractivo';
 import FormularioAlerta from './components/FormularioAlerta';
 import { supabase } from './services/supabase';
-import { PawPrint, Navigation, AlertTriangle, Eye, CheckCircle } from 'lucide-react';
+import { PawPrint, Navigation, AlertTriangle, Eye, ShieldCheck, CheckCircle } from 'lucide-react';
 
 export default function App() {
   const [reportes, setReportes] = useState([]);
   const [coordenadaSeleccionada, setCoordenadaSeleccionada] = useState(null);
   const [centroMapa, setCentroMapa] = useState([-34.6037, -58.5600]);
+  const [casoVinculadoId, setCasoVinculadoId] = useState(null);
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
     cargarReportes();
+
+    const canal = supabase
+      .channel('cambios-mapa-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reportes_mapa' },
+        () => {
+          cargarReportes();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
   }, []);
 
   const cargarReportes = async () => {
@@ -54,36 +70,39 @@ export default function App() {
     );
   };
 
-  // Contadores dinámicos sincronizados directamente con la base de datos
+  const reportesActivos = reportes.filter((r) => !r.resuelto);
   const totalPerdidos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'PERDIDO' && !r.resuelto).length;
-  const totalVistos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'VISTO' && !r.resuelto).length;
+  const totalVistos = reportes.filter((r) => (String(r.tipo_alerta).toUpperCase() === 'VISTO' || String(r.tipo_alerta).toUpperCase() === 'AVISTADO') && !r.resuelto).length;
+  const totalRetenidos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'RETENIDO' && !r.resuelto).length;
   const totalEncontrados = reportes.filter((r) => r.resuelto === true).length;
-  const totalVigentes = totalPerdidos + totalVistos;
-
-  const fondoHuellas = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M30 30c-2.2 0-4 1.8-4 4 0 2.2 1.8 5 4 5s4-2.8 4-5c0-2.2-1.8-4-4-4zm-6-4c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-9-5c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/g%3E%3C/svg%3E")`;
+  const totalVigentes = totalPerdidos + totalVistos + totalRetenidos;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', fontFamily: 'system-ui, -apple-system, sans-serif', backgroundColor: '#f3f4f6', overflow: 'hidden' }}>
-      <header
+    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden' }}>
+      
+      {/* BARRA LATERAL IZQUIERDA */}
+      <aside
         style={{
-          background: `#1e3a8a ${fondoHuellas}`,
-          color: '#ffffff',
-          padding: '12px 16px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          width: '320px',
+          minWidth: '290px',
+          backgroundColor: '#ffffff',
+          borderRight: '1px solid #d1fae5',
+          display: 'flex',
+          flexDirection: 'column',
           zIndex: 1000,
-          flexShrink: 0
+          boxShadow: '2px 0 10px rgba(6, 78, 59, 0.08)'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ backgroundColor: '#ffffff', color: '#1e3a8a', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PawPrint size={24} />
+        <div style={{ backgroundColor: '#064e3b', padding: '12px 14px', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ backgroundColor: '#10b981', color: '#ffffff', padding: '5px', borderRadius: '50%', display: 'flex' }}>
+              <PawPrint size={18} />
             </div>
             <div>
-              <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.5px' }}>
+              <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ecfdf5' }}>
                 Siguiendo Huellas
               </h1>
-              <span style={{ fontSize: '0.8rem', color: '#93c5fd', fontWeight: 600, letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#a7f3d0', fontWeight: 600 }}>
                 SIG - Mascotas
               </span>
             </div>
@@ -91,103 +110,109 @@ export default function App() {
 
           <button
             onClick={obtenerMiUbicacion}
+            title="Ubicar mi posición"
             style={{
-              backgroundColor: '#2563eb',
+              backgroundColor: '#059669',
               color: '#ffffff',
-              border: '1px solid #60a5fa',
-              padding: '8px 14px',
-              borderRadius: '8px',
+              border: '1px solid #34d399',
+              padding: '5px 8px',
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+              gap: '4px',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              cursor: 'pointer'
             }}
           >
-            <Navigation size={16} />
+            <Navigation size={12} />
             <span>Mi GPS</span>
           </button>
         </div>
 
+        <div style={{ flex: 1, padding: '12px', overflowY: 'auto', backgroundColor: '#f0fdf4' }}>
+          <FormularioAlerta
+            coordenadaSeleccionada={coordenadaSeleccionada}
+            reportesActivos={reportesActivos}
+            casoVinculadoId={casoVinculadoId}
+            onCancelarVinculacion={() => setCasoVinculadoId(null)}
+            onAlertaGuardada={() => {
+              setCoordenadaSeleccionada(null);
+              setCasoVinculadoId(null);
+              cargarReportes();
+            }}
+          />
+        </div>
+      </aside>
+
+      {/* ÁREA PRINCIPAL: CONTADORES SUPERIORES + MAPA */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+        
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            backgroundColor: '#065f46',
+            padding: '6px 10px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
             gap: '8px',
-            maxWidth: '1200px',
-            margin: '10px auto 0 auto',
-            paddingTop: '8px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)'
+            flexWrap: 'wrap',
+            zIndex: 900,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
           }}
         >
-          <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#bfdbfe', fontWeight: 600 }}>Vigentes</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff' }}>{totalVigentes}</div>
+          <div style={{ backgroundColor: '#047857', border: '1px solid #10b981', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
+            <div style={{ fontSize: '0.62rem', color: '#a7f3d0', fontWeight: 700 }}>Vigentes</div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>{totalVigentes}</div>
           </div>
 
-          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#fca5a5', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-              <AlertTriangle size={12} /> Perdidos
+          <div style={{ backgroundColor: '#991b1b', border: '1px solid #ef4444', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
+            <div style={{ fontSize: '0.62rem', color: '#fca5a5', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+              <AlertTriangle size={10} /> Perdidos
             </div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fecaca' }}>{totalPerdidos}</div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fee2e2' }}>{totalPerdidos}</div>
           </div>
 
-          <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#fde68a', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-              <Eye size={12} /> Avistados
+          <div style={{ backgroundColor: '#b45309', border: '1px solid #f59e0b', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
+            <div style={{ fontSize: '0.62rem', color: '#fde68a', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+              <Eye size={10} /> Avistados
             </div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fef3c7' }}>{totalVistos}</div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fef3c7' }}>{totalVistos}</div>
           </div>
 
-          <div style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#86efac', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-              <CheckCircle size={12} /> Encontrados
+          <div style={{ backgroundColor: '#0369a1', border: '1px solid #38bdf8', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
+            <div style={{ fontSize: '0.62rem', color: '#bae6fd', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+              <ShieldCheck size={10} /> Retenidos
             </div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#bbf7d0' }}>{totalEncontrados}</div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#e0f2fe' }}>{totalRetenidos}</div>
           </div>
+
+          <div style={{ backgroundColor: '#064e3b', border: '1px solid #34d399', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
+            <div style={{ fontSize: '0.62rem', color: '#6ee7b7', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+              <CheckCircle size={10} /> Encontrados
+            </div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#d1fae5' }}>{totalEncontrados}</div>
+          </div>
+
+          {cargando && (
+            <div style={{ fontSize: '0.68rem', color: '#a7f3d0', fontStyle: 'italic', marginLeft: '6px' }}>
+              Sincronizando...
+            </div>
+          )}
         </div>
-      </header>
 
-      <main style={{ flex: 1, position: 'relative', width: '100%' }}>
-        <MapaInteractivo
-          reportes={reportes}
-          centro={centroMapa}
-          coordenadaSeleccionada={coordenadaSeleccionada}
-          onSeleccionarCoordenada={(coords) => setCoordenadaSeleccionada(coords)}
-          onAlertaModificada={cargarReportes}
-        />
-
-        {cargando && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-              zIndex: 999
-            }}
-          >
-            Actualizando...
-          </div>
-        )}
+        <div style={{ flex: 1, width: '100%', height: '100%', position: 'relative' }}>
+          <MapaInteractivo
+            reportes={reportes}
+            centro={centroMapa}
+            coordenadaSeleccionada={coordenadaSeleccionada}
+            onSeleccionarCoordenada={(coords) => setCoordenadaSeleccionada(coords)}
+            onAlertaModificada={cargarReportes}
+            onVincularAvistamiento={(id) => setCasoVinculadoId(id)}
+          />
+        </div>
       </main>
 
-      <footer style={{ flexShrink: 0, zIndex: 1000, backgroundColor: '#ffffff', borderTop: '1px solid #e5e7eb' }}>
-        <FormularioAlerta
-          coordenadaSeleccionada={coordenadaSeleccionada}
-          onAlertaGuardada={() => {
-            setCoordenadaSeleccionada(null);
-            cargarReportes();
-          }}
-        />
-      </footer>
     </div>
   );
 }
