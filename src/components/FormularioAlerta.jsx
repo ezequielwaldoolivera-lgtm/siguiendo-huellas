@@ -25,38 +25,29 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
         fotoUrl = await subirFotoMascota(foto);
       }
 
-      // Geometría PostGIS estándar WKT
-      const puntoWKT = `SRID=4326;POINT(${coordenadaSeleccionada.lng} ${coordenadaSeleccionada.lat})`;
+      // Llamada directa a la función SQL de PostGIS
+      const { error } = await supabase.rpc('insertar_reporte_geo', {
+        p_tipo_alerta: tipoAlerta.toUpperCase(),
+        p_descripcion: descripcion || 'Sin descripción',
+        p_telefono: telefonoContacto || '',
+        p_foto_url: fotoUrl,
+        p_lat: parseFloat(coordenadaSeleccionada.lat),
+        p_lng: parseFloat(coordenadaSeleccionada.lng)
+      });
 
-      // Enviar datos duplicando nombres de columna para compatibilidad total
-      const { error } = await supabase.from('reportes_mapa').insert([
-        {
-          tipo_alerta: tipoAlerta.toUpperCase(),
-          descripcion: descripcion || 'Sin descripción detallada',
-          telefono_contacto: telefonoContacto || null,
-          contacto_telefono: telefonoContacto || null,
-          foto_url: fotoUrl,
-          ubicacion: puntoWKT,
-          resuelto: false
-        }
-      ]);
+      if (error) throw error;
 
-      if (error) {
-        throw error;
-      }
-
-      // Limpiar campos y refrescar mapa
       setDescripcion('');
       setTelefonoContacto('');
       setFoto(null);
 
       if (onAlertaGuardada) {
-        onAlertaGuardada();
+        await onAlertaGuardada();
       }
 
       alert('¡Alerta registrada con éxito en el mapa!');
     } catch (err) {
-      console.error('Error al guardar en Supabase:', err);
+      console.error('Error al guardar:', err);
       alert('Error al publicar: ' + (err.message || 'Error desconocido'));
     } finally {
       setSubiendo(false);
