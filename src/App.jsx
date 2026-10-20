@@ -17,36 +17,18 @@ export default function App() {
   const cargarReportes = async () => {
     setCargando(true);
     try {
-      // 1. Intentar por RPC (entrega lat y lng numéricos garantizados)
-      const { data, error } = await supabase.rpc('obtener_reportes_activos');
+      const { data, error } = await supabase
+        .from('reportes_mapa')
+        .select('*')
+        .order('fecha_hora', { ascending: false });
 
-      if (!error && Array.isArray(data)) {
+      if (error) {
+        console.error('Error al cargar reportes:', error);
+      } else if (data) {
         setReportes(data);
-      } else {
-        // Respaldo de seguridad si fallara el RPC
-        const fallback = await supabase
-          .from('reportes_mapa')
-          .select('*')
-          .order('fecha_hora', { ascending: false });
-
-        if (fallback.data) {
-          const procesados = fallback.data.map((item) => {
-            let lat = item.lat;
-            let lng = item.lng;
-            if (item.ubicacion && typeof item.ubicacion === 'string') {
-              const match = item.ubicacion.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
-              if (match) {
-                lng = parseFloat(match[1]);
-                lat = parseFloat(match[2]);
-              }
-            }
-            return { ...item, lat, lng };
-          });
-          setReportes(procesados);
-        }
       }
     } catch (err) {
-      console.error('Error al cargar reportes:', err);
+      console.error('Error inesperado:', err);
     } finally {
       setCargando(false);
     }
@@ -72,7 +54,7 @@ export default function App() {
     );
   };
 
-  // Contadores dinámicos sincronizados con el estado de la base de datos
+  // Contadores dinámicos sincronizados directamente con la base de datos
   const totalPerdidos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'PERDIDO' && !r.resuelto).length;
   const totalVistos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'VISTO' && !r.resuelto).length;
   const totalEncontrados = reportes.filter((r) => r.resuelto === true).length;
