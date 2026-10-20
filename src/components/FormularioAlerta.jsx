@@ -28,53 +28,30 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
       const lat = parseFloat(coordenadaSeleccionada.lat);
       const lng = parseFloat(coordenadaSeleccionada.lng);
 
-      // Inserción en PostGIS compatible
-      const { data, error } = await supabase
-        .from('reportes_mapa')
-        .insert([
-          {
-            tipo_alerta: tipoAlerta.toUpperCase(),
-            descripcion: descripcion || 'Sin descripción',
-            telefono_contacto: telefonoContacto || null,
-            contacto_telefono: telefonoContacto || null,
-            foto_url: fotoUrl,
-            ubicacion: `SRID=4326;POINT(${lng} ${lat})`,
-            resuelto: false
-          }
-        ])
-        .select();
-
-      if (error) {
-        // Respaldo mediante RPC si la inserción directa de texto WKT rebotara
-        const rpcRes = await supabase.rpc('insertar_reporte_geo', {
-          p_tipo_alerta: tipoAlerta.toUpperCase(),
-          p_descripcion: descripcion || 'Sin descripción',
-          p_telefono: telefonoContacto || '',
-          p_foto_url: fotoUrl,
-          p_lat: lat,
-          p_lng: lng
-        });
-        if (rpcRes.error) throw rpcRes.error;
-      }
-
-      // Notificar al mapa con el objeto listo para renderizarse al instante
-      const nuevoPunto = {
-        id: data && data[0] ? data[0].id : Math.random().toString(),
+      const nuevoReporte = {
         tipo_alerta: tipoAlerta.toUpperCase(),
-        descripcion: descripcion,
-        telefono_contacto: telefonoContacto,
+        descripcion: descripcion || 'Sin descripción',
+        telefono_contacto: telefonoContacto || null,
+        contacto_telefono: telefonoContacto || null,
         foto_url: fotoUrl,
         lat: lat,
         lng: lng,
+        ubicacion: `SRID=4326;POINT(${lng} ${lat})`,
         resuelto: false
       };
+
+      const { error } = await supabase
+        .from('reportes_mapa')
+        .insert([nuevoReporte]);
+
+      if (error) throw error;
 
       setDescripcion('');
       setTelefonoContacto('');
       setFoto(null);
 
       if (onAlertaGuardada) {
-        onAlertaGuardada(nuevoPunto);
+        onAlertaGuardada();
       }
 
       alert('¡Alerta registrada con éxito en el mapa!');
