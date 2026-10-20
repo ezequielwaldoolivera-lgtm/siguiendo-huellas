@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '../services/supabase';
@@ -11,7 +11,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-function EventosMapa({ onSeleccionarCoordenada }) {
+// Listener para capturar clics en el mapa
+function ManejadorEventosMapa({ onSeleccionarCoordenada }) {
   useMapEvents({
     click(e) {
       if (onSeleccionarCoordenada) {
@@ -19,6 +20,17 @@ function EventosMapa({ onSeleccionarCoordenada }) {
       }
     },
   });
+  return null;
+}
+
+// Controlador de cámara para centrar el mapa al usar GPS o tocar el panel
+function CentradorMapa({ centro }) {
+  const map = useMap();
+  useEffect(() => {
+    if (centro && Array.isArray(centro) && centro.length === 2) {
+      map.flyTo(centro, 15, { animate: true, duration: 1.2 });
+    }
+  }, [centro, map]);
   return null;
 }
 
@@ -44,9 +56,8 @@ export default function MapaInteractivo({
   };
 
   return (
-    <div style={{ height: '100%', width: '100%' }}>
+    <div style={{ height: '100%', width: '100%', position: 'relative' }}>
       <MapContainer
-        key={`${centro[0]}-${centro[1]}`}
         center={centro}
         zoom={13}
         style={{ height: '100%', width: '100%' }}
@@ -56,21 +67,24 @@ export default function MapaInteractivo({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <EventosMapa onSeleccionarCoordenada={onSeleccionarCoordenada} />
+        <CentradorMapa centro={centro} />
+        <ManejadorEventosMapa onSeleccionarCoordenada={onSeleccionarCoordenada} />
 
+        {/* Pin temporal que marca dónde se hizo clic */}
         {coordenadaSeleccionada && (
           <Marker position={[coordenadaSeleccionada.lat, coordenadaSeleccionada.lng]}>
             <Popup autoPan={false}>
               <div style={{ textAlign: 'center', padding: '2px' }}>
                 <strong style={{ color: '#2563eb' }}>Punto Marcado</strong>
                 <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
-                  {coordenadaSeleccionada.lat.toFixed(4)}, {coordenadaSeleccionada.lng.toFixed(4)}
+                  {coordenadaSeleccionada.lat.toFixed(5)}, {coordenadaSeleccionada.lng.toFixed(5)}
                 </div>
               </div>
             </Popup>
           </Marker>
         )}
 
+        {/* Marcadores de los reportes guardados */}
         {reportes.map((item) => {
           if (!item.ubicacion || !item.ubicacion.coordinates) return null;
           const [lng, lat] = item.ubicacion.coordinates;

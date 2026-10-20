@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import MapaInteractivo from './components/MapaInteractivo';
 import FormularioAlerta from './components/FormularioAlerta';
 import { supabase } from './services/supabase';
-import { PawPrint, MapPin, Navigation, AlertTriangle, Eye, CheckCircle } from 'lucide-react';
+import { PawPrint, Navigation, AlertTriangle, Eye, CheckCircle } from 'lucide-react';
 
 export default function App() {
   const [reportes, setReportes] = useState([]);
   const [coordenadaSeleccionada, setCoordenadaSeleccionada] = useState(null);
-  const [centroMapa, setCentroMapa] = useState([-34.6037, -58.5600]); // Coordenadas Tres de Febrero
+  const [centroMapa, setCentroMapa] = useState([-34.6037, -58.5600]);
   const [cargando, setCargando] = useState(false);
 
-  // Carga automática al iniciar la app o recargar la página
   useEffect(() => {
     cargarReportes();
   }, []);
@@ -35,18 +34,18 @@ export default function App() {
     }
   };
 
-  // Obtener geolocalización del celular o navegador
   const obtenerMiUbicacion = () => {
     if (!navigator.geolocation) {
-      alert('Tu dispositivo o navegador no soporta geolocalización.');
+      alert('Tu dispositivo no soporta geolocalización.');
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setCentroMapa([latitude, longitude]);
-        setCoordenadaSeleccionada({ lat: latitude, lng: longitude });
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCentroMapa([lat, lng]);
+        setCoordenadaSeleccionada({ lat, lng });
       },
       (error) => {
         alert('No se pudo obtener la ubicación: ' + error.message);
@@ -55,7 +54,6 @@ export default function App() {
     );
   };
 
-  // Enfocar en el mapa el grupo según el tipo tocado en el panel
   const enfocarTipo = (tipo) => {
     const coincidentes = reportes.filter((r) => {
       if (tipo === 'RESUELTO') return r.resuelto === true;
@@ -68,23 +66,19 @@ export default function App() {
         setCentroMapa([primerPunto.ubicacion.coordinates[1], primerPunto.ubicacion.coordinates[0]]);
       }
     } else {
-      alert(`No hay alertas activas de tipo "${tipo}" para visualizar.`);
+      alert(`No hay alertas activas de tipo "${tipo}".`);
     }
   };
 
-  // Métricas para el panel en tiempo real
   const totalPerdidos = reportes.filter((r) => r.tipo_alerta === 'PERDIDO' && !r.resuelto).length;
   const totalVistos = reportes.filter((r) => r.tipo_alerta === 'VISTO' && !r.resuelto).length;
   const totalEncontrados = reportes.filter((r) => r.resuelto === true).length;
   const totalVigentes = totalPerdidos + totalVistos;
 
-  // Fondo sutil con huellitas SVG
   const fondoHuellas = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.06' fill-rule='evenodd'%3E%3Cpath d='M30 30c-2.2 0-4 1.8-4 4 0 2.2 1.8 5 4 5s4-2.8 4-5c0-2.2-1.8-4-4-4zm-6-4c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-9-5c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/g%3E%3C/svg%3E")`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', fontFamily: 'system-ui, -apple-system, sans-serif', backgroundColor: '#f3f4f6', overflow: 'hidden' }}>
-      
-      {/* ENCABEZADO CON TEXTURA DE HUELLAS */}
       <header
         style={{
           background: `#1e3a8a ${fondoHuellas}`,
@@ -132,7 +126,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* PANEL VIGENTE DE MÉTRICAS INTERACTIVAS */}
         <div
           style={{
             display: 'grid',
@@ -144,31 +137,15 @@ export default function App() {
             borderTop: '1px solid rgba(255, 255, 255, 0.15)'
           }}
         >
-          {/* TOTAL VIGENTES */}
-          <div
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '6px',
-              padding: '6px',
-              textAlign: 'center'
-            }}
-          >
+          <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: '#bfdbfe', fontWeight: 600 }}>Vigentes</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff' }}>{totalVigentes}</div>
           </div>
 
-          {/* PERDIDOS (Clickable: hace foco en el mapa) */}
           <div
             onClick={() => enfocarTipo('PERDIDO')}
-            title="Tocar para saltar a perdidos en el mapa"
-            style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.2)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              borderRadius: '6px',
-              padding: '6px',
-              textAlign: 'center',
-              cursor: 'pointer'
-            }}
+            title="Tocar para saltar a perdidos"
+            style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center', cursor: 'pointer' }}
           >
             <div style={{ fontSize: '0.7rem', color: '#fca5a5', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <AlertTriangle size={12} /> Perdidos
@@ -176,18 +153,10 @@ export default function App() {
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fecaca' }}>{totalPerdidos}</div>
           </div>
 
-          {/* AVISTADOS (Clickable: hace foco en el mapa) */}
           <div
             onClick={() => enfocarTipo('VISTO')}
-            title="Tocar para saltar a avistados en el mapa"
-            style={{
-              backgroundColor: 'rgba(245, 158, 11, 0.2)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              borderRadius: '6px',
-              padding: '6px',
-              textAlign: 'center',
-              cursor: 'pointer'
-            }}
+            title="Tocar para saltar a avistados"
+            style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center', cursor: 'pointer' }}
           >
             <div style={{ fontSize: '0.7rem', color: '#fde68a', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <Eye size={12} /> Avistados
@@ -195,18 +164,10 @@ export default function App() {
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fef3c7' }}>{totalVistos}</div>
           </div>
 
-          {/* ENCONTRADOS / RESUELTOS */}
           <div
             onClick={() => enfocarTipo('RESUELTO')}
             title="Tocar para ver historial resuelto"
-            style={{
-              backgroundColor: 'rgba(34, 197, 94, 0.2)',
-              border: '1px solid rgba(34, 197, 94, 0.4)',
-              borderRadius: '6px',
-              padding: '6px',
-              textAlign: 'center',
-              cursor: 'pointer'
-            }}
+            style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center', cursor: 'pointer' }}
           >
             <div style={{ fontSize: '0.7rem', color: '#86efac', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <CheckCircle size={12} /> Encontrados
@@ -216,7 +177,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* ÁREA DE VISUALIZACIÓN CARTOGRÁFICA */}
       <main style={{ flex: 1, position: 'relative', width: '100%' }}>
         <MapaInteractivo
           reportes={reportes}
@@ -246,7 +206,6 @@ export default function App() {
         )}
       </main>
 
-      {/* PIE / FORMULARIO FLOTANTE DE REGISTRO */}
       <footer style={{ flexShrink: 0, zIndex: 1000, backgroundColor: '#ffffff', borderTop: '1px solid #e5e7eb' }}>
         <FormularioAlerta
           coordenadaSeleccionada={coordenadaSeleccionada}
