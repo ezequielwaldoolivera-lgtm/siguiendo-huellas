@@ -11,7 +11,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Función para generar pines SVG por color
 const crearIconoPin = (colorHex) => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="34" height="34">
     <path fill="${colorHex}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -76,18 +75,23 @@ export default function MapaInteractivo({
 
   return (
     <div style={{ height: '100%', width: '100%' }}>
-      <MapContainer '100%' '100%', center="{centro}" height: style="{{" width: zoom="{13}" }}>
-        <TileLayer attribution="&copy; <a href=" https://www.openstreetmap.org/copyright"">OpenStreetMap</a>'
+      <MapContainer
+        center={centro}
+        zoom={13}
+        style={{ height: '100%', width: '100%' }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <CamaraMapa centro="{centro}"/>
-        <ListenerClicMapa onSeleccionarCoordenada="{onSeleccionarCoordenada}"/>
+        <CamaraMapa centro={centro} />
+        <ListenerClicMapa onSeleccionarCoordenada={onSeleccionarCoordenada} />
 
         {/* Pin temporal azul de selección */}
         {coordenadaSeleccionada && (
-          <Marker coordenadaSeleccionada.lng]} icon="{pinAzul}" position="{[coordenadaSeleccionada.lat,">
-            <Popup autoPan="{false}">
+          <Marker position={[coordenadaSeleccionada.lat, coordenadaSeleccionada.lng]} icon={pinAzul}>
+            <Popup autoPan={false}>
               <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#2563eb' }}>
                 Punto marcado
               </div>
@@ -95,11 +99,10 @@ export default function MapaInteractivo({
           </Marker>
         )}
 
-        {/* Marcadores de la base de datos */}
+        {/* Marcadores guardados */}
         {reportes.map((item, index) => {
           if (item.resuelto) return null;
 
-          // Extracción universal de coordenadas
           let latVal = item.lat ?? item.latitude;
           let lngVal = item.lng ?? item.longitude;
 
@@ -119,7 +122,11 @@ export default function MapaInteractivo({
           const icono = esPerdido ? pinRojo : pinNaranja;
 
           return (
-            <Marker : ? `pin-${index}`} `rep-${item.id}` icon="{icono}" key="{item.id" lng]} position="{[lat,">
+            <Marker
+              key={item.id ? `rep-${item.id}` : `pin-${index}`}
+              position={[lat, lng]}
+              icon={icono}
+            >
               <Popup>
                 <div style={{ minWidth: '170px' }}>
                   <span
