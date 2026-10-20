@@ -25,6 +25,9 @@ export default function FormularioAlerta({
     }
   }, [casoVinculadoId]);
 
+  const pinValido = pinSeguridad.trim().length >= 4;
+  const formularioListo = Boolean(coordenadaSeleccionada && pinValido && !subiendo);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -33,8 +36,8 @@ export default function FormularioAlerta({
       return;
     }
 
-    if (!pinSeguridad || pinSeguridad.trim().length < 4) {
-      alert('Ingresá un PIN de 4 dígitos para que solo vos puedas cerrar la alerta.');
+    if (!pinValido) {
+      alert('Ingresá un PIN de al menos 4 dígitos para que solo vos puedas cerrar la alerta.');
       return;
     }
 
@@ -89,7 +92,7 @@ export default function FormularioAlerta({
         onAlertaGuardada(data && data[0] ? data[0] : nuevoReporte);
       }
 
-      alert('¡Alerta publicada! Recordá tu PIN para cerrarla más adelante.');
+      alert('¡Alerta publicada! Guardá tu PIN para cerrarla más adelante.');
     } catch (err) {
       console.error(err);
       alert('Error al publicar: ' + (err.message || 'Error desconocido'));
@@ -175,18 +178,26 @@ export default function FormularioAlerta({
 
       <div>
         <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
-          PIN de Cierre (4 números)
+          PIN de Cierre (4 dígitos requeridos) *
         </label>
         <div style={{ position: 'relative' }}>
           <input
             type="password"
             maxLength={6}
-            placeholder="Ej: 1234 (Solo vos podrás resolverla)"
+            placeholder="Mínimo 4 dígitos para poder resolverla"
             value={pinSeguridad}
             onChange={(e) => setPinSeguridad(e.target.value)}
-            style={{ width: '100%', padding: '8px 8px 8px 30px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.82rem', outline: 'none' }}
+            style={{
+              width: '100%',
+              padding: '8px 8px 8px 30px',
+              borderRadius: '6px',
+              border: pinValido ? '1px solid #10b981' : '1px solid #f87171',
+              backgroundColor: pinValido ? '#ffffff' : '#fef2f2',
+              fontSize: '0.82rem',
+              outline: 'none'
+            }}
           />
-          <KeyRound size={14} style={{ position: 'absolute', left: '9px', top: '10px', color: '#059669' }} />
+          <KeyRound size={14} style={{ position: 'absolute', left: '9px', top: '10px', color: pinValido ? '#059669' : '#ef4444' }} />
         </div>
       </div>
 
@@ -242,17 +253,17 @@ export default function FormularioAlerta({
 
       <button
         type="submit"
-        disabled={!coordenadaSeleccionada || subiendo}
+        disabled={!formularioListo}
         style={{
           width: '100%',
           padding: '10px',
           borderRadius: '6px',
           border: 'none',
-          backgroundColor: coordenadaSeleccionada ? '#047857' : '#9ca3af',
+          backgroundColor: formularioListo ? '#047857' : '#9ca3af',
           color: '#ffffff',
           fontWeight: 800,
           fontSize: '0.85rem',
-          cursor: coordenadaSeleccionada && !subiendo ? 'pointer' : 'not-allowed',
+          cursor: formularioListo ? 'pointer' : 'not-allowed',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -260,7 +271,15 @@ export default function FormularioAlerta({
         }}
       >
         <Send size={15} />
-        <span>{subiendo ? 'Publicando...' : 'Publicar Alerta'}</span>
+        <span>
+          {subiendo
+            ? 'Publicando...'
+            : !coordenadaSeleccionada
+            ? 'Marcá el mapa o GPS'
+            : !pinValido
+            ? 'Ingresá un PIN (mín 4 dígitos)'
+            : 'Publicar Alerta'}
+        </span>
       </button>
     </form>
   );
