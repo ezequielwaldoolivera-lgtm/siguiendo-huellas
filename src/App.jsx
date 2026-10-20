@@ -14,57 +14,39 @@ export default function App() {
     cargarReportes();
   }, []);
 
-  // Función auxiliar para extraer lat y lng de cualquier formato que devuelva Supabase
-  const normalizarReporte = (item) => {
-    let lat = null;
-    let lng = null;
-
-    if (item.lat && item.lng) {
-      lat = parseFloat(item.lat);
-      lng = parseFloat(item.lng);
-    } else if (item.ubicacion) {
-      // Caso 1: Objeto GeoJSON { type: "Point", coordinates: [lng, lat] }
-      if (item.ubicacion.coordinates && Array.isArray(item.ubicacion.coordinates)) {
-        lng = parseFloat(item.ubicacion.coordinates[0]);
-        lat = parseFloat(item.ubicacion.coordinates[1]);
-      }
-      // Caso 2: Texto WKT tipo POINT(lng lat) o SRID=4326;POINT(lng lat)
-      else if (typeof item.ubicacion === 'string') {
-        const coincidencia = item.ubicacion.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
-        if (coincidencia) {
-          lng = parseFloat(coincidencia[1]);
-          lat = parseFloat(coincidencia[2]);
-        }
-      }
-    }
-
-    return {
-      ...item,
-      lat,
-      lng
-    };
-  };
-
   const cargarReportes = async () => {
     setCargando(true);
     try {
-      // Leemos directamente de la tabla principal
-      const { data, error } = await supabase
-        .from('reportes_mapa')
-        .select('*')
-        .order('fecha_hora', { ascending: false });
+      // 1. Intentar por RPC (entrega lat y lng numéricos garantizados)
+      const { data, error } = await supabase.rpc('obtener_reportes_activos');
 
-      if (error) {
-        console.error('Error al consultar reportes:', error);
-      } else if (data) {
-        const reportesProcesados = data
-          .map(normalizarReporte)
-          .filter((r) => r.lat !== null && r.lng !== null && !isNaN(r.lat) && !isNaN(r.lng));
+      if (!error && Array.isArray(data)) {
+        setReportes(data);
+      } else {
+        // Respaldo de seguridad si fallara el RPC
+        const fallback = await supabase
+          .from('reportes_mapa')
+          .select('*')
+          .order('fecha_hora', { ascending: false });
 
-        setReportes(reportesProcesados);
+        if (fallback.data) {
+          const procesados = fallback.data.map((item) => {
+            let lat = item.lat;
+            let lng = item.lng;
+            if (item.ubicacion && typeof item.ubicacion === 'string') {
+              const match = item.ubicacion.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
+              if (match) {
+                lng = parseFloat(match[1]);
+                lat = parseFloat(match[2]);
+              }
+            }
+            return { ...item, lat, lng };
+          });
+          setReportes(procesados);
+        }
       }
     } catch (err) {
-      console.error('Error inesperado:', err);
+      console.error('Error al cargar reportes:', err);
     } finally {
       setCargando(false);
     }
@@ -90,6 +72,7 @@ export default function App() {
     );
   };
 
+  // Contadores dinámicos sincronizados con el estado de la base de datos
   const totalPerdidos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'PERDIDO' && !r.resuelto).length;
   const totalVistos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'VISTO' && !r.resuelto).length;
   const totalEncontrados = reportes.filter((r) => r.resuelto === true).length;
@@ -217,10 +200,7 @@ export default function App() {
       <footer style={{ flexShrink: 0, zIndex: 1000, backgroundColor: '#ffffff', borderTop: '1px solid #e5e7eb' }}>
         <FormularioAlerta
           coordenadaSeleccionada={coordenadaSeleccionada}
-          onAlertaGuardada={(nuevoReporte) => {
-            if (nuevoReporte) {
-              setReportes((prev) => [normalizarReporte(nuevoReporte), ...prev]);
-            }
+          onAlertaGuardada={() => {
             setCoordenadaSeleccionada(null);
             cargarReportes();
           }}
