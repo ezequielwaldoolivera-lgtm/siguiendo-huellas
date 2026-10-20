@@ -1,113 +1,143 @@
 import React, { useState } from 'react';
-import { Camera } from 'lucide-react';
-import { subirImagen } from '../services/storageService';
 import { supabase } from '../services/supabase';
+import { subirFotoMascota } from '../services/storageService';
+import { Camera, Send, Check } from 'lucide-react';
 
-export default function FormularioAlerta({ puntoSeleccionado, onReporteCreado }) {
-  const [tipoAlerta, setTipoAlerta] = useState('perdido');
-  const [telefono, setTelefono] = useState('');
+export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuardada }) {
+  const [tipoAlerta, setTipoAlerta] = useState('PERDIDO');
   const [descripcion, setDescripcion] = useState('');
-  const [archivo, setArchivo] = useState(null);
-  const [cargando, setCargando] = useState(false);
+  const [telefonoContacto, setTelefonoContacto] = useState('');
+  const [foto, setFoto] = useState(null);
+  const [subiendo, setSubiendo] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!puntoSeleccionado) {
-      alert('Marcá un punto en el mapa o usá tu GPS.');
+
+    if (!coordenadaSeleccionada) {
+      alert('Tocá primero un punto en el mapa o presioná Mi GPS.');
       return;
     }
 
-    setCargando(true);
-    let fotoUrl = null;
-    if (archivo) {
-      fotoUrl = await subirImagen(archivo, 'mascotas');
-    }
+    setSubiendo(true);
+    try {
+      let fotoUrl = null;
+      if (foto) {
+        fotoUrl = await subirFotoMascota(foto);
+      }
 
-    const { error } = await supabase.from('reportes_mapa').insert([
-      {
-        tipo_alerta: tipoAlerta,
-        descripcion,
-        contacto_telefono: telefono,
-        latitud: puntoSeleccionado.lat,
-        longitud: puntoSeleccionado.lng,
-        foto_url: fotoUrl,
-      },
-    ]);
+      const puntoWKT = `POINT(${coordenadaSeleccionada.lng} ${coordenadaSeleccionada.lat})`;
 
-    setCargando(false);
+      const { error } = await supabase.from('reportes_mapa').insert([
+        {
+          tipo_alerta: tipoAlerta,
+          descripcion: descripcion,
+          telefono_contacto: telefonoContacto,
+          foto_url: fotoUrl,
+          ubicacion: puntoWKT,
+          resuelto: false
+        }
+      ]);
 
-    if (!error) {
+      if (error) throw error;
+
+      // Limpiar formulario tras éxito
       setDescripcion('');
-      setTelefono('');
-      setArchivo(null);
-      onReporteCreado();
-    } else {
-      console.error(error);
-      alert(`Error de base de datos: ${error?.message || error?.details || JSON.stringify(error)}`);
+      setTelefonoContacto('');
+      setFoto(null);
+      if (onAlertaGuardada) onAlertaGuardada();
+      alert('¡Alerta registrada con éxito en el mapa!');
+    } catch (err) {
+      console.error(err);
+      alert('Error al publicar: ' + err.message);
+    } finally {
+      setSubiendo(false);
     }
   };
 
   return (
-    <div style={{ padding: '12px 16px', background: '#f8fafc', borderTop: '1px solid #cbd5e1' }}>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '650px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <select 
-            value={tipoAlerta} 
-            onChange={(e) => setTipoAlerta(e.target.value)} 
-            style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-          >
-            <option value="perdido">Perro Perdido</option>
-            <option value="avistado">Perro Visto</option>
-            <option value="encontrado">Perro Retenido</option>
-          </select>
-          <input 
-            type="tel" 
-            placeholder="WhatsApp (ej: 1123456789)" 
-            value={telefono} 
-            onChange={(e) => setTelefono(e.target.value)} 
-            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
-            required 
-          />
-        </div>
+    <form onSubmit={handleSubmit} style={{ padding: '10px 14px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: '8px', marginBottom: '8px' }}>
+        <select
+          value={tipoAlerta}
+          onChange={(e) => setTipoAlerta(e.target.value)}
+          style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.85rem', fontWeight: 600 }}
+        >
+          <option value="PERDIDO">Perdido</option>
+          <option value="VISTO">Avistado</option>
+        </select>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input 
-            type="text" 
-            placeholder="Descripción (raza, collar, características)..." 
-            value={descripcion} 
-            onChange={(e) => setDescripcion(e.target.value)} 
-            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
-            required 
-          />
-          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px', background: archivo ? '#16a34a' : '#475569', color: 'white', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-            <Camera size={16} />
-            <span>{archivo ? 'Foto cargada' : 'Foto'}</span>
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment" 
-              style={{ display: 'none' }} 
-              onChange={(e) => setArchivo(e.target.files[0])} 
-            />
-          </label>
-        </div>
+        <input
+          type="text"
+          placeholder="Teléfono / WhatsApp de contacto"
+          value={telefonoContacto}
+          onChange={(e) => setTelefonoContacto(e.target.value)}
+          style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
+        />
 
-        <button 
-          type="submit" 
-          disabled={cargando || !puntoSeleccionado} 
-          style={{ 
-            padding: '10px', 
-            background: !puntoSeleccionado ? '#94a3b8' : cargando ? '#64748b' : '#16a34a', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '6px', 
-            fontWeight: 'bold', 
-            cursor: puntoSeleccionado && !cargando ? 'pointer' : 'not-allowed' 
+        <label
+          style={{
+            backgroundColor: foto ? '#16a34a' : '#2563eb',
+            color: '#fff',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            whiteSpace: 'nowrap'
           }}
         >
-          {cargando ? 'Registrando alerta...' : puntoSeleccionado ? 'Publicar en el Mapa' : 'Marcá el mapa o usá tu GPS'}
-        </button>
-      </form>
-    </div>
+          {foto ? <Check size={16} /> : <Camera size={16} />}
+          <span>{foto ? 'Foto lista' : 'Foto'}</span>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => setFoto(e.target.files[0] || null)}
+            style={{ display: 'none' }}
+          />
+        </label>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+        <input
+          type="text"
+          placeholder="Descripción (raza, collar, señas particulares...)"
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={!coordenadaSeleccionada || subiendo}
+        style={{
+          width: '100%',
+          padding: '10px',
+          borderRadius: '6px',
+          border: 'none',
+          backgroundColor: coordenadaSeleccionada ? '#2563eb' : '#9ca3af',
+          color: '#ffffff',
+          fontWeight: 700,
+          fontSize: '0.9rem',
+          cursor: coordenadaSeleccionada && !subiendo ? 'pointer' : 'not-allowed',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px'
+        }}
+      >
+        <Send size={16} />
+        <span>
+          {subiendo
+            ? 'Publicando en el mapa...'
+            : coordenadaSeleccionada
+            ? `Confirmar Alerta (${coordenadaSeleccionada.lat.toFixed(3)}, ${coordenadaSeleccionada.lng.toFixed(3)})`
+            : 'Tocá el mapa o presioná "Mi GPS" para ubicar'}
+        </span>
+      </button>
+    </form>
   );
 }
