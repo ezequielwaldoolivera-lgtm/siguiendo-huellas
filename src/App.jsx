@@ -4,6 +4,11 @@ import FormularioAlerta from './components/FormularioAlerta';
 import { supabase } from './services/supabase';
 import { PawPrint, Navigation, AlertTriangle, Eye, ShieldCheck, CheckCircle } from 'lucide-react';
 
+// Patrón SVG repetible de huellitas sutiles para fondos
+const fondoHuellitas = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60' opacity='0.08'%3E%3Cg fill='%23ffffff'%3E%3Cellipse cx='20' cy='22' rx='2.2' ry='3' transform='rotate(-20 20 22)'/%3E%3Cellipse cx='27' cy='18' rx='2.2' ry='3' transform='rotate(-5 27 18)'/%3E%3Cellipse cx='34' cy='18' rx='2.2' ry='3' transform='rotate(5 34 18)'/%3E%3Cellipse cx='41' cy='22' rx='2.2' ry='3' transform='rotate(20 41 22)'/%3E%3Cpath d='M23 27 C23 24, 38 24, 38 27 C38 33, 35 36, 30.5 36 C26 36, 23 33, 23 27 Z'/%3E%3C/g%3E%3C/svg%3E")`;
+
+const fondoHuellitasLateral = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 60 60' opacity='0.05'%3E%3Cg fill='%23064e3b'%3E%3Cellipse cx='20' cy='22' rx='2.2' ry='3' transform='rotate(-20 20 22)'/%3E%3Cellipse cx='27' cy='18' rx='2.2' ry='3' transform='rotate(-5 27 18)'/%3E%3Cellipse cx='34' cy='18' rx='2.2' ry='3' transform='rotate(5 34 18)'/%3E%3Cellipse cx='41' cy='22' rx='2.2' ry='3' transform='rotate(20 41 22)'/%3E%3Cpath d='M23 27 C23 24, 38 24, 38 27 C38 33, 35 36, 30.5 36 C26 36, 23 33, 23 27 Z'/%3E%3C/g%3E%3C/svg%3E")`;
+
 export default function App() {
   const [reportes, setReportes] = useState([]);
   const [coordenadaSeleccionada, setCoordenadaSeleccionada] = useState(null);
@@ -80,29 +85,43 @@ export default function App() {
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden' }}>
       
-      {/* BARRA LATERAL IZQUIERDA */}
+      {/* 1. BARRA LATERAL IZQUIERDA */}
       <aside
         style={{
-          width: '320px',
-          minWidth: '290px',
+          width: '340px',
+          minWidth: '320px',
           backgroundColor: '#ffffff',
           borderRight: '1px solid #d1fae5',
           display: 'flex',
           flexDirection: 'column',
           zIndex: 1000,
-          boxShadow: '2px 0 10px rgba(6, 78, 59, 0.08)'
+          boxShadow: '3px 0 12px rgba(6, 78, 59, 0.08)'
         }}
       >
-        <div style={{ backgroundColor: '#064e3b', padding: '12px 14px', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ backgroundColor: '#10b981', color: '#ffffff', padding: '5px', borderRadius: '50%', display: 'flex' }}>
-              <PawPrint size={18} />
+        {/* Cabecera lateral: altura fija exacta de 64px para alinear con la barra superior */}
+        <div
+          style={{
+            height: '64px',
+            backgroundColor: '#064e3b',
+            backgroundImage: fondoHuellitas,
+            padding: '0 16px',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxSizing: 'border-box',
+            borderRight: '1px solid #047857'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+            <div style={{ backgroundColor: '#10b981', color: '#ffffff', padding: '6px', borderRadius: '50%', display: 'flex', boxShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
+              <PawPrint size={19} />
             </div>
             <div>
-              <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ecfdf5' }}>
+              <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#ecfdf5', letterSpacing: '-0.3px' }}>
                 Siguiendo Huellas
               </h1>
-              <span style={{ fontSize: '0.7rem', color: '#a7f3d0', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.72rem', color: '#a7f3d0', fontWeight: 700 }}>
                 SIG - Mascotas
               </span>
             </div>
@@ -115,22 +134,34 @@ export default function App() {
               backgroundColor: '#059669',
               color: '#ffffff',
               border: '1px solid #34d399',
-              padding: '5px 8px',
-              borderRadius: '6px',
+              padding: '6px 11px',
+              borderRadius: '7px',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              cursor: 'pointer'
+              gap: '5px',
+              fontWeight: 800,
+              fontSize: '0.74rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
           >
-            <Navigation size={12} />
+            <Navigation size={13} />
             <span>Mi GPS</span>
           </button>
         </div>
 
-        <div style={{ flex: 1, padding: '12px', overflowY: 'auto', backgroundColor: '#f0fdf4' }}>
+        {/* Formulario lateral distribuido ocupando todo el alto */}
+        <div
+          style={{
+            flex: 1,
+            padding: '16px',
+            overflowY: 'auto',
+            backgroundColor: '#f0fdf4',
+            backgroundImage: fondoHuellitasLateral,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
           <FormularioAlerta
             coordenadaSeleccionada={coordenadaSeleccionada}
             reportesActivos={reportesActivos}
@@ -145,62 +176,81 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ÁREA PRINCIPAL: CONTADORES SUPERIORES + MAPA */}
+      {/* 2. ÁREA PRINCIPAL: CONTADORES SUPERIORES + MAPA */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
         
+        {/* Barra superior de contadores: altura idéntica de 64px, alineación al ras */}
         <div
           style={{
-            backgroundColor: '#065f46',
-            padding: '6px 10px',
+            height: '64px',
+            backgroundColor: '#064e3b',
+            backgroundImage: fondoHuellitas,
+            padding: '0 16px',
             display: 'flex',
-            justifyContent: 'center',
             alignItems: 'center',
-            gap: '8px',
-            flexWrap: 'wrap',
+            justifyContent: 'center',
             zIndex: 900,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+            boxSizing: 'border-box',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
           }}
         >
-          <div style={{ backgroundColor: '#047857', border: '1px solid #10b981', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
-            <div style={{ fontSize: '0.62rem', color: '#a7f3d0', fontWeight: 700 }}>Vigentes</div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>{totalVigentes}</div>
-          </div>
-
-          <div style={{ backgroundColor: '#991b1b', border: '1px solid #ef4444', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
-            <div style={{ fontSize: '0.62rem', color: '#fca5a5', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-              <AlertTriangle size={10} /> Perdidos
+          {/* Contenedor flexible que distribuye los 5 bloques ocupando la masa visual central */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              width: '100%',
+              maxWidth: '820px'
+            }}
+          >
+            {/* VIGENTES */}
+            <div style={{ flex: 1, backgroundColor: '#047857', border: '1px solid #10b981', borderRadius: '8px', padding: '5px 8px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '0.66rem', color: '#a7f3d0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Vigentes</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ffffff', lineHeight: 1.2 }}>{totalVigentes}</div>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fee2e2' }}>{totalPerdidos}</div>
-          </div>
 
-          <div style={{ backgroundColor: '#b45309', border: '1px solid #f59e0b', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
-            <div style={{ fontSize: '0.62rem', color: '#fde68a', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-              <Eye size={10} /> Avistados
+            {/* PERDIDOS */}
+            <div style={{ flex: 1, backgroundColor: '#991b1b', border: '1px solid #ef4444', borderRadius: '8px', padding: '5px 8px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '0.66rem', color: '#fca5a5', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <AlertTriangle size={11} /> Perdidos
+              </div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#fee2e2', lineHeight: 1.2 }}>{totalPerdidos}</div>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fef3c7' }}>{totalVistos}</div>
-          </div>
 
-          <div style={{ backgroundColor: '#0369a1', border: '1px solid #38bdf8', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
-            <div style={{ fontSize: '0.62rem', color: '#bae6fd', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-              <ShieldCheck size={10} /> Retenidos
+            {/* AVISTADOS */}
+            <div style={{ flex: 1, backgroundColor: '#b45309', border: '1px solid #f59e0b', borderRadius: '8px', padding: '5px 8px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '0.66rem', color: '#fde68a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <Eye size={11} /> Avistados
+              </div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#fef3c7', lineHeight: 1.2 }}>{totalVistos}</div>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#e0f2fe' }}>{totalRetenidos}</div>
-          </div>
 
-          <div style={{ backgroundColor: '#064e3b', border: '1px solid #34d399', borderRadius: '6px', padding: '3px 9px', textAlign: 'center', minWidth: '70px' }}>
-            <div style={{ fontSize: '0.62rem', color: '#6ee7b7', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-              <CheckCircle size={10} /> Encontrados
+            {/* RETENIDOS */}
+            <div style={{ flex: 1, backgroundColor: '#0369a1', border: '1px solid #38bdf8', borderRadius: '8px', padding: '5px 8px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '0.66rem', color: '#bae6fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <ShieldCheck size={11} /> Retenidos
+              </div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#e0f2fe', lineHeight: 1.2 }}>{totalRetenidos}</div>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#d1fae5' }}>{totalEncontrados}</div>
+
+            {/* ENCONTRADOS */}
+            <div style={{ flex: 1, backgroundColor: '#064e3b', border: '1px solid #34d399', borderRadius: '8px', padding: '5px 8px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '0.66rem', color: '#6ee7b7', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                <CheckCircle size={11} /> Encontrados
+              </div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#d1fae5', lineHeight: 1.2 }}>{totalEncontrados}</div>
+            </div>
           </div>
 
           {cargando && (
-            <div style={{ fontSize: '0.68rem', color: '#a7f3d0', fontStyle: 'italic', marginLeft: '6px' }}>
+            <div style={{ fontSize: '0.7rem', color: '#a7f3d0', fontStyle: 'italic', position: 'absolute', right: '16px' }}>
               Sincronizando...
             </div>
           )}
         </div>
 
+        {/* MAPA A PANTALLA COMPLETA */}
         <div style={{ flex: 1, width: '100%', height: '100%', position: 'relative' }}>
           <MapaInteractivo
             reportes={reportes}

@@ -102,185 +102,231 @@ export default function FormularioAlerta({
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-      {idPadreSeleccionado && (
-        <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 8px', fontSize: '0.75rem', color: '#92400e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Link2 size={13} /> Vinculado a caso existente
-          </span>
-          <button
-            type="button"
-            onClick={() => { setIdPadreSeleccionado(''); if (onCancelarVinculacion) onCancelarVinculacion(); }}
-            style={{ background: 'none', border: 'none', color: '#b45309', fontWeight: 800, cursor: 'pointer' }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        height: '100%',
+        gap: '12px',
+        boxSizing: 'border-box'
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+        {idPadreSeleccionado && (
+          <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '6px 10px', fontSize: '0.75rem', color: '#92400e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Link2 size={13} /> Vinculado a caso existente
+            </span>
+            <button
+              type="button"
+              onClick={() => { setIdPadreSeleccionado(''); if (onCancelarVinculacion) onCancelarVinculacion(); }}
+              style={{ background: 'none', border: 'none', color: '#b45309', fontWeight: 800, cursor: 'pointer' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
-      <div>
-        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
-          Estado
-        </label>
-        <select
-          value={tipoAlerta}
-          onChange={(e) => setTipoAlerta(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px',
-            borderRadius: '6px',
-            border: '1px solid #a7f3d0',
-            backgroundColor: '#ffffff',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            color: '#065f46',
-            outline: 'none'
-          }}
-        >
-          <option value="PERDIDO">🚨 Perdido (Busco a mi mascota)</option>
-          <option value="VISTO">👀 Avistado (Lo vi deambulando)</option>
-          <option value="RETENIDO">🏠 Retenido (Lo tengo bajo resguardo)</option>
-        </select>
-      </div>
-
-      {tipoAlerta === 'VISTO' && !idPadreSeleccionado && (
+        {/* ESTADO */}
         <div>
-          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
-            ¿Es un perro ya publicado? (Opcional)
+          <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', marginBottom: '4px', display: 'block', textAlign: 'center', letterSpacing: '0.5px' }}>
+            Estado
           </label>
           <select
-            value={idPadreSeleccionado}
-            onChange={(e) => setIdPadreSeleccionado(e.target.value)}
-            style={{ width: '100%', padding: '7px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.78rem', outline: 'none' }}
-          >
-            <option value="">-- Nuevo reporte suelto --</option>
-            {reportesActivos.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.tipo_alerta}: {(r.descripcion || 'Sin descripción').slice(0, 30)}...
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div>
-        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
-          WhatsApp de Contacto
-        </label>
-        <input
-          type="tel"
-          placeholder="Ej: 11 2345 6789"
-          value={telefonoContacto}
-          onChange={(e) => setTelefonoContacto(e.target.value)}
-          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.82rem', outline: 'none' }}
-        />
-      </div>
-
-      <div>
-        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
-          PIN de Cierre (4 dígitos requeridos) *
-        </label>
-        <div style={{ position: 'relative' }}>
-          <input
-            type="password"
-            maxLength={6}
-            placeholder="Mínimo 4 dígitos para poder resolverla"
-            value={pinSeguridad}
-            onChange={(e) => setPinSeguridad(e.target.value)}
+            value={tipoAlerta}
+            onChange={(e) => setTipoAlerta(e.target.value)}
             style={{
               width: '100%',
-              padding: '8px 8px 8px 30px',
-              borderRadius: '6px',
-              border: pinValido ? '1px solid #10b981' : '1px solid #f87171',
-              backgroundColor: pinValido ? '#ffffff' : '#fef2f2',
-              fontSize: '0.82rem',
-              outline: 'none'
+              padding: '9px',
+              borderRadius: '8px',
+              border: '1px solid #a7f3d0',
+              backgroundColor: '#ffffff',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              color: '#065f46',
+              outline: 'none',
+              textAlign: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="PERDIDO">🚨 Perdido (Busco a mi mascota)</option>
+            <option value="VISTO">👀 Avistado (Lo vi deambulando)</option>
+            <option value="RETENIDO">🏠 Retenido (Lo tengo bajo resguardo)</option>
+          </select>
+        </div>
+
+        {tipoAlerta === 'VISTO' && !idPadreSeleccionado && (
+          <div>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block', textAlign: 'center' }}>
+              ¿Es un perro ya publicado? (Opcional)
+            </label>
+            <select
+              value={idPadreSeleccionado}
+              onChange={(e) => setIdPadreSeleccionado(e.target.value)}
+              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #a7f3d0', fontSize: '0.78rem', outline: 'none', textAlign: 'center' }}
+            >
+              <option value="">-- Nuevo reporte suelto --</option>
+              {reportesActivos.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.tipo_alerta}: {(r.descripcion || 'Sin descripción').slice(0, 30)}...
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* WHATSAPP */}
+        <div>
+          <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', marginBottom: '4px', display: 'block', textAlign: 'center', letterSpacing: '0.5px' }}>
+            WhatsApp de Contacto
+          </label>
+          <input
+            type="tel"
+            placeholder="Ej: 11 2345 6789"
+            value={telefonoContacto}
+            onChange={(e) => setTelefonoContacto(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px',
+              borderRadius: '8px',
+              border: '1px solid #a7f3d0',
+              fontSize: '0.84rem',
+              outline: 'none',
+              textAlign: 'center',
+              boxSizing: 'border-box'
             }}
           />
-          <KeyRound size={14} style={{ position: 'absolute', left: '9px', top: '10px', color: pinValido ? '#059669' : '#ef4444' }} />
         </div>
-      </div>
 
-      <div>
-        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#064e3b', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>
-          Descripción / Señas
+        {/* PIN */}
+        <div>
+          <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', marginBottom: '4px', display: 'block', textAlign: 'center', letterSpacing: '0.5px' }}>
+            PIN de Cierre (4 dígitos requeridos) *
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="password"
+              maxLength={6}
+              placeholder="Mínimo 4 dígitos para poder resolverla"
+              value={pinSeguridad}
+              onChange={(e) => setPinSeguridad(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '9px 12px 9px 34px',
+                borderRadius: '8px',
+                border: pinValido ? '1px solid #10b981' : '1px solid #f87171',
+                backgroundColor: pinValido ? '#ffffff' : '#fef2f2',
+                fontSize: '0.84rem',
+                outline: 'none',
+                textAlign: 'center',
+                boxSizing: 'border-box'
+              }}
+            />
+            <KeyRound size={15} style={{ position: 'absolute', left: '11px', top: '11px', color: pinValido ? '#059669' : '#ef4444' }} />
+          </div>
+        </div>
+
+        {/* DESCRIPCIÓN */}
+        <div>
+          <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', marginBottom: '4px', display: 'block', textAlign: 'center', letterSpacing: '0.5px' }}>
+            Descripción / Señas
+          </label>
+          <textarea
+            rows={3}
+            placeholder="Raza, tamaño, collar, hacia dónde iba..."
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px',
+              borderRadius: '8px',
+              border: '1px solid #a7f3d0',
+              fontSize: '0.84rem',
+              outline: 'none',
+              resize: 'none',
+              textAlign: 'center',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+
+        {/* FOTO */}
+        <label
+          style={{
+            backgroundColor: foto ? '#059669' : '#10b981',
+            color: '#ffffff',
+            padding: '10px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            cursor: 'pointer',
+            fontSize: '0.84rem',
+            fontWeight: 700,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.06)'
+          }}
+        >
+          {foto ? <Check size={16} /> : <Camera size={16} />}
+          <span>{foto ? 'Foto adjuntada' : 'Adjuntar Foto'}</span>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => setFoto(e.target.files[0] || null)}
+            style={{ display: 'none' }}
+          />
         </label>
-        <textarea
-          rows={2}
-          placeholder="Raza, tamaño, collar, hacia dónde iba..."
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #a7f3d0', fontSize: '0.82rem', outline: 'none', resize: 'none' }}
-        />
       </div>
 
-      <label
-        style={{
-          backgroundColor: foto ? '#059669' : '#10b981',
-          color: '#ffffff',
-          padding: '8px',
-          borderRadius: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          cursor: 'pointer',
-          fontSize: '0.82rem',
-          fontWeight: 600
-        }}
-      >
-        {foto ? <Check size={15} /> : <Camera size={15} />}
-        <span>{foto ? 'Foto lista' : 'Adjuntar Foto'}</span>
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={(e) => setFoto(e.target.files[0] || null)}
-          style={{ display: 'none' }}
-        />
-      </label>
+      {/* BLOQUE INFERIOR DE ACCIÓN (UBICACIÓN Y BOTÓN) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+        {coordenadaSeleccionada ? (
+          <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px', fontSize: '0.75rem', color: '#065f46', textAlign: 'center', fontWeight: 600 }}>
+            📍 Ubicación: {coordenadaSeleccionada.lat.toFixed(4)}, {coordenadaSeleccionada.lng.toFixed(4)}
+          </div>
+        ) : (
+          <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px', fontSize: '0.74rem', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}>
+            <AlertCircle size={15} flexShrink={0} />
+            <span>Tocá en el mapa o <b>Mi GPS</b> para marcar.</span>
+          </div>
+        )}
 
-      {coordenadaSeleccionada ? (
-        <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '6px', fontSize: '0.73rem', color: '#065f46', textAlign: 'center' }}>
-          📍 <b>Punto:</b> {coordenadaSeleccionada.lat.toFixed(4)}, {coordenadaSeleccionada.lng.toFixed(4)}
-        </div>
-      ) : (
-        <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px', fontSize: '0.72rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <AlertCircle size={14} flexShrink={0} />
-          <span>Tocá en el mapa o <b>Mi GPS</b> para marcar el lugar.</span>
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={!formularioListo}
-        style={{
-          width: '100%',
-          padding: '10px',
-          borderRadius: '6px',
-          border: 'none',
-          backgroundColor: formularioListo ? '#047857' : '#9ca3af',
-          color: '#ffffff',
-          fontWeight: 800,
-          fontSize: '0.85rem',
-          cursor: formularioListo ? 'pointer' : 'not-allowed',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px'
-        }}
-      >
-        <Send size={15} />
-        <span>
-          {subiendo
-            ? 'Publicando...'
-            : !coordenadaSeleccionada
-            ? 'Marcá el mapa o GPS'
-            : !pinValido
-            ? 'Ingresá un PIN (mín 4 dígitos)'
-            : 'Publicar Alerta'}
-        </span>
-      </button>
+        <button
+          type="submit"
+          disabled={!formularioListo}
+          style={{
+            width: '100%',
+            padding: '12px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: formularioListo ? '#047857' : '#9ca3af',
+            color: '#ffffff',
+            fontWeight: 800,
+            fontSize: '0.88rem',
+            cursor: formularioListo ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: formularioListo ? '0 3px 8px rgba(4,120,87,0.3)' : 'none',
+            letterSpacing: '0.3px'
+          }}
+        >
+          <Send size={16} />
+          <span>
+            {subiendo
+              ? 'Publicando...'
+              : !coordenadaSeleccionada
+              ? 'Marcá el mapa o GPS'
+              : !pinValido
+              ? 'Ingresá PIN (4 dígitos)'
+              : 'Publicar Alerta'}
+          </span>
+        </button>
+      </div>
     </form>
   );
 }
