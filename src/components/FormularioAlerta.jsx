@@ -13,7 +13,7 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!coordenadaSeleccionada) {
+    if (!coordenadaSeleccionada || !coordenadaSeleccionada.lat || !coordenadaSeleccionada.lng) {
       alert('Tocá primero un punto en el mapa o presioná Mi GPS.');
       return;
     }
@@ -25,30 +25,39 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
         fotoUrl = await subirFotoMascota(foto);
       }
 
-      const puntoWKT = `POINT(${coordenadaSeleccionada.lng} ${coordenadaSeleccionada.lat})`;
+      // Geometría PostGIS estándar WKT
+      const puntoWKT = `SRID=4326;POINT(${coordenadaSeleccionada.lng} ${coordenadaSeleccionada.lat})`;
 
+      // Enviar datos duplicando nombres de columna para compatibilidad total
       const { error } = await supabase.from('reportes_mapa').insert([
         {
-          tipo_alerta: tipoAlerta,
-          descripcion: descripcion,
-          telefono_contacto: telefonoContacto,
+          tipo_alerta: tipoAlerta.toUpperCase(),
+          descripcion: descripcion || 'Sin descripción detallada',
+          telefono_contacto: telefonoContacto || null,
+          contacto_telefono: telefonoContacto || null,
           foto_url: fotoUrl,
           ubicacion: puntoWKT,
           resuelto: false
         }
       ]);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      // Limpiar formulario tras éxito
+      // Limpiar campos y refrescar mapa
       setDescripcion('');
       setTelefonoContacto('');
       setFoto(null);
-      if (onAlertaGuardada) onAlertaGuardada();
+
+      if (onAlertaGuardada) {
+        onAlertaGuardada();
+      }
+
       alert('¡Alerta registrada con éxito en el mapa!');
     } catch (err) {
-      console.error(err);
-      alert('Error al publicar: ' + err.message);
+      console.error('Error al guardar en Supabase:', err);
+      alert('Error al publicar: ' + (err.message || 'Error desconocido'));
     } finally {
       setSubiendo(false);
     }
@@ -56,7 +65,7 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
 
   return (
     <form onSubmit={handleSubmit} style={{ padding: '10px 14px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: '8px', marginBottom: '8px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr auto', gap: '8px', marginBottom: '8px' }}>
         <select
           value={tipoAlerta}
           onChange={(e) => setTipoAlerta(e.target.value)}
@@ -67,7 +76,7 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
         </select>
 
         <input
-          type="text"
+          type="tel"
           placeholder="Teléfono / WhatsApp de contacto"
           value={telefonoContacto}
           onChange={(e) => setTelefonoContacto(e.target.value)}
@@ -134,8 +143,8 @@ export default function FormularioAlerta({ coordenadaSeleccionada, onAlertaGuard
           {subiendo
             ? 'Publicando en el mapa...'
             : coordenadaSeleccionada
-            ? `Confirmar Alerta (${coordenadaSeleccionada.lat.toFixed(3)}, ${coordenadaSeleccionada.lng.toFixed(3)})`
-            : 'Tocá el mapa o presioná "Mi GPS" para ubicar'}
+            ? `Publicar Alerta (${coordenadaSeleccionada.lat.toFixed(3)}, ${coordenadaSeleccionada.lng.toFixed(3)})`
+            : 'Marcá el mapa o usá tu GPS para ubicar'}
         </span>
       </button>
     </form>
