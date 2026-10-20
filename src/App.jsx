@@ -17,25 +17,34 @@ export default function App() {
   const cargarReportes = async () => {
     setCargando(true);
     try {
-      const { data, error } = await supabase
+      // Intentar leer primero de la vista procesada con lat/lng
+      let { data, error } = await supabase
         .from('vista_reportes_mapa')
         .select('*')
         .order('fecha_hora', { ascending: false });
 
-      if (error) {
-        console.error('Error al consultar reportes:', error);
-      } else if (data) {
+      // Respaldo de seguridad: si la vista no estuviese lista, lee la tabla directa
+      if (error || !data) {
+        const res = await supabase
+          .from('reportes_mapa')
+          .select('*')
+          .order('fecha_hora', { ascending: false });
+        data = res.data;
+      }
+
+      if (data) {
         setReportes(data);
       }
     } catch (err) {
-      console.error('Error inesperado:', err);
+      console.error('Error al cargar reportes:', err);
     } finally {
       setCargando(false);
     }
   };
+
   const obtenerMiUbicacion = () => {
     if (!navigator.geolocation) {
-      alert('Tu dispositivo no soporta geolocalización.');
+      alert('Tu navegador o dispositivo no soporta geolocalización.');
       return;
     }
 
@@ -53,24 +62,8 @@ export default function App() {
     );
   };
 
-  const enfocarTipo = (tipo) => {
-    const coincidentes = reportes.filter((r) => {
-      if (tipo === 'RESUELTO') return r.resuelto === true;
-      return r.tipo_alerta === tipo && !r.resuelto;
-    });
-
-    if (coincidentes.length > 0) {
-      const primerPunto = coincidentes[0];
-      if (primerPunto.ubicacion && primerPunto.ubicacion.coordinates) {
-        setCentroMapa([primerPunto.ubicacion.coordinates[1], primerPunto.ubicacion.coordinates[0]]);
-      }
-    } else {
-      alert(`No hay alertas activas de tipo "${tipo}".`);
-    }
-  };
-
-  const totalPerdidos = reportes.filter((r) => r.tipo_alerta === 'PERDIDO' && !r.resuelto).length;
-  const totalVistos = reportes.filter((r) => r.tipo_alerta === 'VISTO' && !r.resuelto).length;
+  const totalPerdidos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'PERDIDO' && !r.resuelto).length;
+  const totalVistos = reportes.filter((r) => String(r.tipo_alerta).toUpperCase() === 'VISTO' && !r.resuelto).length;
   const totalEncontrados = reportes.filter((r) => r.resuelto === true).length;
   const totalVigentes = totalPerdidos + totalVistos;
 
@@ -141,33 +134,21 @@ export default function App() {
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff' }}>{totalVigentes}</div>
           </div>
 
-          <div
-            onClick={() => enfocarTipo('PERDIDO')}
-            title="Tocar para saltar a perdidos"
-            style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center', cursor: 'pointer' }}
-          >
+          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: '#fca5a5', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <AlertTriangle size={12} /> Perdidos
             </div>
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fecaca' }}>{totalPerdidos}</div>
           </div>
 
-          <div
-            onClick={() => enfocarTipo('VISTO')}
-            title="Tocar para saltar a avistados"
-            style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center', cursor: 'pointer' }}
-          >
+          <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: '#fde68a', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <Eye size={12} /> Avistados
             </div>
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fef3c7' }}>{totalVistos}</div>
           </div>
 
-          <div
-            onClick={() => enfocarTipo('RESUELTO')}
-            title="Tocar para ver historial resuelto"
-            style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center', cursor: 'pointer' }}
-          >
+          <div style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: '#86efac', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <CheckCircle size={12} /> Encontrados
             </div>
@@ -191,16 +172,16 @@ export default function App() {
               position: 'absolute',
               top: '12px',
               right: '12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              padding: '6px 12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              padding: '6px 14px',
               borderRadius: '20px',
               fontSize: '0.8rem',
-              fontWeight: 600,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              fontWeight: 700,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
               zIndex: 999
             }}
           >
-            Actualizando mapa...
+            Actualizando...
           </div>
         )}
       </main>
@@ -208,9 +189,13 @@ export default function App() {
       <footer style={{ flexShrink: 0, zIndex: 1000, backgroundColor: '#ffffff', borderTop: '1px solid #e5e7eb' }}>
         <FormularioAlerta
           coordenadaSeleccionada={coordenadaSeleccionada}
-          onAlertaGuardada={() => {
-            cargarReportes();
+          onAlertaGuardada={(nuevoReporte) => {
+            // Incorporación inmediata en pantalla para que el pin aparezca sin demoras
+            if (nuevoReporte) {
+              setReportes((prev) => [nuevoReporte, ...prev]);
+            }
             setCoordenadaSeleccionada(null);
+            cargarReportes();
           }}
         />
       </footer>
