@@ -11,7 +11,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Pines SVG universales con anclaje exacto
+// Función para generar pines SVG por color
 const crearIconoPin = (colorHex) => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="34" height="34">
     <path fill="${colorHex}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -20,7 +20,7 @@ const crearIconoPin = (colorHex) => {
 
   return L.divIcon({
     html: svg,
-    className: 'custom-leaflet-pin',
+    className: 'custom-pin-svg',
     iconSize: [34, 34],
     iconAnchor: [17, 34],
     popupAnchor: [0, -34]
@@ -68,7 +68,7 @@ export default function MapaInteractivo({
 
       if (error) throw error;
       if (onAlertaModificada) onAlertaModificada();
-      alert('Alerta marcada como resuelta.');
+      alert('¡Alerta resuelta! El pin fue retirado.');
     } catch (err) {
       alert('Error: ' + err.message);
     }
@@ -76,36 +76,42 @@ export default function MapaInteractivo({
 
   return (
     <div style={{ height: '100%', width: '100%' }}>
-      <MapContainer center={centro} zoom={13} style={{ height: '100%', width: '100%' }}>
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      <MapContainer '100%' '100%', center="{centro}" height: style="{{" width: zoom="{13}" }}>
+        <TileLayer attribution="&copy; <a href=" https://www.openstreetmap.org/copyright"">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <CamaraMapa centro={centro} />
-        <ListenerClicMapa onSeleccionarCoordenada={onSeleccionarCoordenada} />
+        <CamaraMapa centro="{centro}"/>
+        <ListenerClicMapa onSeleccionarCoordenada="{onSeleccionarCoordenada}"/>
 
-        {/* Pin temporal azul donde se hace clic */}
+        {/* Pin temporal azul de selección */}
         {coordenadaSeleccionada && (
-          <Marker position={[coordenadaSeleccionada.lat, coordenadaSeleccionada.lng]} icon={pinAzul}>
-            <Popup autoPan={false}>
+          <Marker coordenadaSeleccionada.lng]} icon="{pinAzul}" position="{[coordenadaSeleccionada.lat,">
+            <Popup autoPan="{false}">
               <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#2563eb' }}>
-                Punto seleccionado
+                Punto marcado
               </div>
             </Popup>
           </Marker>
         )}
 
-        {/* Marcadores guardados */}
+        {/* Marcadores de la base de datos */}
         {reportes.map((item, index) => {
-          // Si está marcado como resuelto, no lo dibuja
           if (item.resuelto) return null;
 
-          // Conversión numérica garantizada
-          const latitud = Number(item.lat);
-          const longitud = Number(item.lng);
+          // Extracción universal de coordenadas
+          let latVal = item.lat ?? item.latitude;
+          let lngVal = item.lng ?? item.longitude;
 
-          if (isNaN(latitud) || isNaN(longitud) || latitud === 0 || longitud === 0) {
+          if ((!latVal || !lngVal) && item.ubicacion?.coordinates) {
+            lngVal = item.ubicacion.coordinates[0];
+            latVal = item.ubicacion.coordinates[1];
+          }
+
+          const lat = parseFloat(latVal);
+          const lng = parseFloat(lngVal);
+
+          if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
             return null;
           }
 
@@ -113,11 +119,7 @@ export default function MapaInteractivo({
           const icono = esPerdido ? pinRojo : pinNaranja;
 
           return (
-            <Marker
-              key={item.id ? `rep-${item.id}` : `idx-${index}`}
-              position={[latitud, longitud]}
-              icon={icono}
-            >
+            <Marker : ? `pin-${index}`} `rep-${item.id}` icon="{icono}" key="{item.id" lng]} position="{[lat,">
               <Popup>
                 <div style={{ minWidth: '170px' }}>
                   <span
@@ -147,9 +149,9 @@ export default function MapaInteractivo({
                   )}
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {item.telefono_contacto && (
+                    {(item.telefono_contacto || item.contacto_telefono) && (
                       <a
-                        href={`https://wa.me/${String(item.telefono_contacto).replace(/[^0-9]/g, '')}`}
+                        href={`https://wa.me/${String(item.telefono_contacto || item.contacto_telefono).replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -163,7 +165,7 @@ export default function MapaInteractivo({
                           fontWeight: 700
                         }}
                       >
-                        Contactar por WhatsApp
+                        Contactar WhatsApp
                       </a>
                     )}
 
