@@ -1,146 +1,169 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Phone, CheckCircle } from 'lucide-react';
 import { supabase } from '../services/supabase';
 
-// Función para generar pines con colores dinámicos SVG
-const crearIcono = (color) => {
-  return L.divIcon({
-    className: 'custom-pin',
-    html: `<svg width="30" height="42" viewBox="0 0 24 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 0C5.37 0 0 5.37 0 12C0 21 12 36 12 36C12 36 24 21 24 12C24 5.37 18.63 0 12 0Z" fill="${color}"/>
-            <circle cx="12" cy="12" r="5" fill="white"/>
-           </svg>`,
-    iconSize: [30, 42],
-    iconAnchor: [15, 42],
-    popupAnchor: [0, -38],
-  });
-};
-// Función para calcular el tiempo restante antes de que caduque el pin
-const calcularTiempoRestante = (createdAt, tipoAlerta) => {
-  const horasTotales = tipoAlerta === 'avistado' ? 48 : tipoAlerta === 'encontrado' ? 360 : 720; // 48h, 15d o 30d
-  const creado = new Date(createdAt).getTime();
-  const expira = creado + horasTotales * 60 * 60 * 1000;
-  const diferenciaMs = expira - Date.now();
+// Corrección de íconos predeterminados de Leaflet en Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
-  if (diferenciaMs <= 0) return 'Expirado';
-
-  const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
-  const dias = Math.floor(horas / 24);
-
-  if (dias > 0) {
-    return `Quedan ${dias} día${dias > 1 ? 's' : ''}`;
-  }
-  return `Quedan ${horas} hora${horas > 1 ? 's' : ''}`;
-};
-const iconoRojo = crearIcono('#dc2626');   // Perdido
-const iconoNaranja = crearIcono('#f59e0b'); // Visto
-const iconoVerde = crearIcono('#16a34a');   // Retenido
-const iconoTemporal = crearIcono('#2563eb'); // Selección actual
-
-function EventosMapa({ onMarcar }) {
+// Componente interno para capturar clics en el mapa
+function SelectorUbicacion({ onSeleccionarCoordenada }) {
   useMapEvents({
     click(e) {
-      onMarcar(e.latlng);
+      const { lat, lng } = e.latlng;
+      onSeleccionarCoordenada({ lat, lng });
     },
   });
   return null;
 }
 
-function CentradorAutomatico({ centro }) {
-  const map = useMap();
-  React.useEffect(() => {
-    if (centro) map.flyTo(centro, 16);
-  }, [centro, map]);
-  return null;
-}
+export default function MapaInteractivo({
+  reportes = [],
+  centro = [-34.6037, -58.5600],
+  coordenadaSeleccionada = null,
+  onSeleccionarCoordenada,
+  onAlertaModificada
+}) {
+  const marcarComoResuelto = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('reportes_mapa')
+        .update({ resuelto: true })
+        .eq('id', id);
 
-export default function MapaInteractivo({ reportes, puntoSeleccionado, onMarcar, onActualizar }) {
-  const centro3F = [-34.5986, -58.5911];
-
-  const resolverAlerta = async (id) => {
-    if (confirm('¿Confirmás que la mascota ya fue encontrada/resuelta? Se quitará del mapa.')) {
-      const { error } = await supabase.from('reportes_mapa').update({ activo: false }).eq('id', id);
-      
-      if (error) {
-        alert(`Error al dar de baja: ${error.message}`);
-      } else {
-        alert('¡Alerta resuelta con éxito!');
-        if (onActualizar) {
-          onActualizar();
-        }
-      }
+      if (error) throw error;
+      if (onAlertaModificada) onAlertaModificada();
+    } catch (err) {
+      alert('Error al resolver alerta: ' + err.message);
     }
   };
 
   return (
-    <MapContainer center={centro3F} zoom={14} style={{ height: '100%', width: '100%' }}>
+    <MapContainer
+      center={centro}
+      zoom={14}
+      style={{ height: '100%', width: '100%' }}
+    >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <EventosMapa onMarcar={onMarcar} />
-      {puntoSeleccionado && <CentradorAutomatico centro={[puntoSeleccionado.lat, puntoSeleccionado.lng]} />}
 
+      {/* Capturador de eventos de clic */}
+      <SelectorUbicacion onSeleccionarCoordenada={onSeleccionarCoordenada} />
+
+      {/* Pin temporal que marca EXACTAMENTE dónde hiciste clic */}
+      {coordenadaSeleccionada && (
+        <Marker position={[coordenadaSeleccionada.lat, coordenadaSeleccionada.lng]}>
+          <Popup autoPan={false}>
+            <div style={{ textAlign: 'center', padding: '4px' }}>
+              <strong style={{ color: '#2563eb' }}>Punto Seleccionado</strong>
+              <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#4b5563' }}>
+                Lat: {coordenadaSeleccionada.lat.toFixed(5)}<br />
+                Lng: {coordenadaSeleccionada.lng.toFixed(5)}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: '4px' }}>
+                Completa el formulario inferior para guardar.
+              </div>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
+      {/* Renderizado de reportes guardados */}
       {reportes.map((item) => {
-        let iconoSeleccionado = iconoRojo;
-        if (item.tipo_alerta === 'avistado') iconoSeleccionado = iconoNaranja;
-        if (item.tipo_alerta === 'encontrado') iconoSeleccionado = iconoVerde;
+        if (!item.ubicacion || !item.ubicacion.coordinates) return null;
+        const [lng, lat] = item.ubicacion.coordinates;
 
         return (
-          <Marker key={item.id} position={[item.latitud, item.longitud]} icon={iconoSeleccionado}>
+          <Marker key={item.id} position={[lat, lng]}>
             <Popup>
-              <div style={{ maxWidth: '210px' }}>
+              <div style={{ minWidth: '180px' }}>
+                <span
+                  style={{
+                    backgroundColor: item.tipo_alerta === 'PERDIDO' ? '#ef4444' : '#f59e0b',
+                    color: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700
+                  }}
+                >
+                  {item.tipo_alerta}
+                </span>
+
+                <h4 style={{ margin: '8px 0 4px 0', fontSize: '1rem' }}>
+                  {item.nombre_contacto || 'Alerta'}
+                </h4>
+
+                {item.descripcion && (
+                  <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#374151' }}>
+                    {item.descripcion}
+                  </p>
+                )}
+
                 {item.foto_url && (
-                  <img 
-                    src={item.foto_url} 
-                    alt="Mascota" 
-                    style={{ width: '100%', height: '115px', objectFit: 'cover', borderRadius: '6px', marginBottom: '6px' }} 
+                  <img
+                    src={item.foto_url}
+                    alt="Foto reporte"
+                    style={{
+                      width: '100%',
+                      height: '110px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      marginTop: '6px'
+                    }}
                   />
                 )}
-                <strong style={{ 
-                  color: item.tipo_alerta === 'perdido' ? '#dc2626' : item.tipo_alerta === 'avistado' ? '#d97706' : '#16a34a', 
-                  display: 'block', 
-                  textTransform: 'uppercase' 
-                }}>
-                  {item.tipo_alerta}
-                </strong>
-                <p style={{ margin: '4px 0', fontSize: '0.85rem' }}>{item.descripcion}</p>
-                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', margin: '4px 0' }}>
-  ⏳ {calcularTiempoRestante(item.created_at, item.tipo_alerta)}
-</span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
-                  {item.contacto_telefono && (
-                    <a 
-                      href={`https://wa.me/${item.contacto_telefono.replace(/\D/g, '')}`} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      style={{ color: '#16a34a', fontWeight: 'bold', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {item.telefono_contacto && (
+                    <a
+                      href={`https://wa.me/${item.telefono_contacto.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        backgroundColor: '#22c55e',
+                        color: '#fff',
+                        textAlign: 'center',
+                        padding: '5px',
+                        borderRadius: '4px',
+                        textDecoration: 'none',
+                        fontSize: '0.8rem',
+                        fontWeight: 600
+                      }}
                     >
-                      <Phone size={14} /> WhatsApp
+                      Contactar por WhatsApp
                     </a>
                   )}
 
-                  <button
-                    onClick={() => resolverAlerta(item.id)}
-                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#475569' }}
-                  >
-                    <CheckCircle size={12} color="#16a34a" /> Marcar como Resuelto
-                  </button>
+                  {!item.resuelto && (
+                    <button
+                      onClick={() => marcarComoResuelto(item.id)}
+                      style={{
+                        backgroundColor: '#f3f4f6',
+                        border: '1px solid #d1d5db',
+                        padding: '4px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Marcar como Resuelto
+                    </button>
+                  )}
                 </div>
               </div>
             </Popup>
           </Marker>
         );
       })}
-
-      {puntoSeleccionado && (
-        <Marker position={[puntoSeleccionado.lat, puntoSeleccionado.lng]} icon={iconoTemporal}>
-          <Popup>Punto de alerta seleccionado</Popup>
-        </Marker>
-      )}
     </MapContainer>
   );
 }
