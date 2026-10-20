@@ -14,29 +14,57 @@ export default function App() {
     cargarReportes();
   }, []);
 
+  // Función auxiliar para extraer lat y lng de cualquier formato que devuelva Supabase
+  const normalizarReporte = (item) => {
+    let lat = null;
+    let lng = null;
+
+    if (item.lat && item.lng) {
+      lat = parseFloat(item.lat);
+      lng = parseFloat(item.lng);
+    } else if (item.ubicacion) {
+      // Caso 1: Objeto GeoJSON { type: "Point", coordinates: [lng, lat] }
+      if (item.ubicacion.coordinates && Array.isArray(item.ubicacion.coordinates)) {
+        lng = parseFloat(item.ubicacion.coordinates[0]);
+        lat = parseFloat(item.ubicacion.coordinates[1]);
+      }
+      // Caso 2: Texto WKT tipo POINT(lng lat) o SRID=4326;POINT(lng lat)
+      else if (typeof item.ubicacion === 'string') {
+        const coincidencia = item.ubicacion.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
+        if (coincidencia) {
+          lng = parseFloat(coincidencia[1]);
+          lat = parseFloat(coincidencia[2]);
+        }
+      }
+    }
+
+    return {
+      ...item,
+      lat,
+      lng
+    };
+  };
+
   const cargarReportes = async () => {
     setCargando(true);
     try {
-      // Intentar leer primero de la vista procesada con lat/lng
-      let { data, error } = await supabase
-        .from('vista_reportes_mapa')
+      // Leemos directamente de la tabla principal
+      const { data, error } = await supabase
+        .from('reportes_mapa')
         .select('*')
         .order('fecha_hora', { ascending: false });
 
-      // Respaldo de seguridad: si la vista no estuviese lista, lee la tabla directa
-      if (error || !data) {
-        const res = await supabase
-          .from('reportes_mapa')
-          .select('*')
-          .order('fecha_hora', { ascending: false });
-        data = res.data;
-      }
+      if (error) {
+        console.error('Error al consultar reportes:', error);
+      } else if (data) {
+        const reportesProcesados = data
+          .map(normalizarReporte)
+          .filter((r) => r.lat !== null && r.lng !== null && !isNaN(r.lat) && !isNaN(r.lng));
 
-      if (data) {
-        setReportes(data);
+        setReportes(reportesProcesados);
       }
     } catch (err) {
-      console.error('Error al cargar reportes:', err);
+      console.error('Error inesperado:', err);
     } finally {
       setCargando(false);
     }
@@ -44,7 +72,7 @@ export default function App() {
 
   const obtenerMiUbicacion = () => {
     if (!navigator.geolocation) {
-      alert('Tu navegador o dispositivo no soporta geolocalización.');
+      alert('Tu navegador no soporta geolocalización.');
       return;
     }
 
@@ -190,9 +218,8 @@ export default function App() {
         <FormularioAlerta
           coordenadaSeleccionada={coordenadaSeleccionada}
           onAlertaGuardada={(nuevoReporte) => {
-            // Incorporación inmediata en pantalla para que el pin aparezca sin demoras
             if (nuevoReporte) {
-              setReportes((prev) => [nuevoReporte, ...prev]);
+              setReportes((prev) => [normalizarReporte(nuevoReporte), ...prev]);
             }
             setCoordenadaSeleccionada(null);
             cargarReportes();
