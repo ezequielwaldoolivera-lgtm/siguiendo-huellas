@@ -11,27 +11,27 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const crearIcono = (color) => {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="34" height="34">
-      <path fill="${color}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-      <circle cx="12" cy="9" r="3" fill="#ffffff"/>
-    </svg>
-  `;
+// Pines SVG universales con anclaje exacto
+const crearIconoPin = (colorHex) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="34" height="34">
+    <path fill="${colorHex}" stroke="#ffffff" stroke-width="1.5" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+    <circle cx="12" cy="9" r="3.2" fill="#ffffff"/>
+  </svg>`;
+
   return L.divIcon({
     html: svg,
-    className: 'custom-pin',
+    className: 'custom-leaflet-pin',
     iconSize: [34, 34],
     iconAnchor: [17, 34],
     popupAnchor: [0, -34]
   });
 };
 
-const pinRojo = crearIcono('#ef4444');
-const pinNaranja = crearIcono('#f59e0b');
-const pinAzul = crearIcono('#2563eb');
+const pinRojo = crearIconoPin('#ef4444');
+const pinNaranja = crearIconoPin('#f59e0b');
+const pinAzul = crearIconoPin('#2563eb');
 
-function EventosMapa({ onSeleccionarCoordenada }) {
+function ListenerClicMapa({ onSeleccionarCoordenada }) {
   useMapEvents({
     click(e) {
       if (onSeleccionarCoordenada) {
@@ -42,11 +42,11 @@ function EventosMapa({ onSeleccionarCoordenada }) {
   return null;
 }
 
-function Centrador({ centro }) {
+function CamaraMapa({ centro }) {
   const map = useMap();
   useEffect(() => {
     if (centro && Array.isArray(centro) && centro.length === 2) {
-      map.flyTo(centro, 15, { duration: 1.2 });
+      map.flyTo(centro, 14, { duration: 1.0 });
     }
   }, [centro, map]);
   return null;
@@ -68,13 +68,11 @@ export default function MapaInteractivo({
 
       if (error) throw error;
       if (onAlertaModificada) onAlertaModificada();
-      alert('¡Alerta resuelta! El pin fue retirado del mapa.');
+      alert('Alerta marcada como resuelta.');
     } catch (err) {
       alert('Error: ' + err.message);
     }
   };
-
-  const reportesVisibles = reportes.filter((r) => !r.resuelto);
 
   return (
     <div style={{ height: '100%', width: '100%' }}>
@@ -84,40 +82,42 @@ export default function MapaInteractivo({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <Centrador centro={centro} />
-        <EventosMapa onSeleccionarCoordenada={onSeleccionarCoordenada} />
+        <CamaraMapa centro={centro} />
+        <ListenerClicMapa onSeleccionarCoordenada={onSeleccionarCoordenada} />
 
-        {/* Pin que marca dónde tocaste */}
+        {/* Pin temporal azul donde se hace clic */}
         {coordenadaSeleccionada && (
           <Marker position={[coordenadaSeleccionada.lat, coordenadaSeleccionada.lng]} icon={pinAzul}>
             <Popup autoPan={false}>
-              <div style={{ textAlign: 'center' }}>
-                <strong style={{ color: '#2563eb' }}>Punto Marcado</strong>
+              <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#2563eb' }}>
+                Punto seleccionado
               </div>
             </Popup>
           </Marker>
         )}
 
-        {/* Pines vigentes */}
-        {reportesVisibles.map((item) => {
-          // Extracción robusta de coordenadas (tanto de la vista como del WKT o GeoJSON)
-          let lat = item.lat;
-          let lng = item.lng;
+        {/* Marcadores guardados */}
+        {reportes.map((item, index) => {
+          // Si está marcado como resuelto, no lo dibuja
+          if (item.resuelto) return null;
 
-          if (!lat || !lng) {
-            if (item.ubicacion?.coordinates) {
-              lat = item.ubicacion.coordinates[1];
-              lng = item.ubicacion.coordinates[0];
-            }
+          // Conversión numérica garantizada
+          const latitud = Number(item.lat);
+          const longitud = Number(item.lng);
+
+          if (isNaN(latitud) || isNaN(longitud) || latitud === 0 || longitud === 0) {
+            return null;
           }
 
-          if (!lat || !lng) return null;
-
-          const esPerdido = String(item.tipo_alerta).toUpperCase() === 'PERDIDO';
+          const esPerdido = String(item.tipo_alerta || '').toUpperCase() === 'PERDIDO';
           const icono = esPerdido ? pinRojo : pinNaranja;
 
           return (
-            <Marker key={item.id} position={[Number(lat), Number(lng)]} icon={icono}>
+            <Marker
+              key={item.id ? `rep-${item.id}` : `idx-${index}`}
+              position={[latitud, longitud]}
+              icon={icono}
+            >
               <Popup>
                 <div style={{ minWidth: '170px' }}>
                   <span
@@ -163,7 +163,7 @@ export default function MapaInteractivo({
                           fontWeight: 700
                         }}
                       >
-                        Contactar WhatsApp
+                        Contactar por WhatsApp
                       </a>
                     )}
 
