@@ -85,9 +85,11 @@ export default function MapaInteractivo({
         )}
 
         {/* Marcadores de los reportes guardados */}
-        {reportes.map((item) => {
-          if (!item.ubicacion || !item.ubicacion.coordinates) return null;
-          const [lng, lat] = item.ubicacion.coordinates;
+       {reportes.map((item) => {
+          const lat = item.lat || (item.ubicacion?.coordinates ? item.ubicacion.coordinates[1] : null);
+          const lng = item.lng || (item.ubicacion?.coordinates ? item.ubicacion.coordinates[0] : null);
+
+          if (!lat || !lng) return null;
 
           return (
             <Marker key={item.id} position={[lat, lng]}>

@@ -18,7 +18,7 @@ export default function App() {
     setCargando(true);
     try {
       const { data, error } = await supabase
-        .from('reportes_mapa')
+        .from('vista_reportes_mapa')
         .select('*')
         .order('fecha_hora', { ascending: false });
 
@@ -33,7 +33,6 @@ export default function App() {
       setCargando(false);
     }
   };
-
   const obtenerMiUbicacion = () => {
     if (!navigator.geolocation) {
       alert('Tu dispositivo no soporta geolocalización.');
