@@ -1,15 +1,37 @@
 import { supabase } from './supabase';
 
-export async function subirImagen(archivo, subcarpeta) {
-  const extension = archivo.name.split('.').pop();
-  const nombreLimpio = `${subcarpeta}/${Date.now()}_${Math.random().toString(36).substring(2)}.${extension}`;
-  
-  const { error } = await supabase.storage.from('fotos').upload(nombreLimpio, archivo);
-  if (error) {
-    console.error('Fallo en la subida a Storage:', error);
+/**
+ * Sube una imagen al bucket 'mascotas-fotos' de Supabase y retorna la URL pública.
+ * @param {File} archivo - Archivo de imagen seleccionado por el usuario.
+ * @returns {Promise<string|null>} URL pública de la foto subida.
+ */
+export async function subirFotoMascota(archivo) {
+  if (!archivo) return null;
+
+  try {
+    const extension = archivo.name.split('.').pop();
+    const nombreLimpio = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${extension}`;
+    const rutaArchivo = `fotos/${nombreLimpio}`;
+
+    const { error: errorSubida } = await supabase.storage
+      .from('mascotas-fotos')
+      .upload(rutaArchivo, archivo, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (errorSubida) {
+      console.error('Error al subir imagen a Supabase Storage:', errorSubida);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from('mascotas-fotos')
+      .getPublicUrl(rutaArchivo);
+
+    return data?.publicUrl || null;
+  } catch (err) {
+    console.error('Fallo inesperado al procesar la foto:', err);
     return null;
   }
-
-  const { data } = supabase.storage.from('fotos').getPublicUrl(nombreLimpio);
-  return data.publicUrl;
 }
